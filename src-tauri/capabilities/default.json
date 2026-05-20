@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/capability.json",
+  "identifier": "default-capability",
+  "description": "Default capability for PortIntel",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default"
+  ]
+}
