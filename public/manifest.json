@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "PortIntel Advisor",
+  "version": "0.1.0",
+  "description": "AI-powered network port and process management dashboard.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "PortIntel Advisor"
+  },
+  "permissions": [],
+  "host_permissions": [
+    "http://127.0.0.1:12200/*"
+  ]
+}
