@@ -32,7 +32,7 @@ Unlike generic port scanners, **PortIntel** embeds an offline-first **Decision T
 - **🔍 Comprehensive Socket Scanning**: Real-time detection of active ports on Windows (via `netstat`) and macOS/Linux (via `lsof`).
 - **🧠 Embedded ML Inference**: Offline inference using ONNX models via Rust's `tract-onnx` framework. No cloud API keys or internet connection required.
 - **🛡️ Safety Protection Engine**: Hard overrides that prevent users from accidentally terminating core OS processes (like RPC, spoolers, Bonjour, or system resolvers) to avoid freezes, crashes, or Blue Screens (BSOD).
-- **🤖 Interactive AI Advisor**: A diagnostic sidebar detailing socket context, process summaries, and graceful shutdown alternatives, complete with a persistent chat memory.
+- **📋 Offline Diagnostic Advisor**: A detail-rich inspector panel detailing socket context, process category, security assessment, and OS command alternatives to safely stop bindings.
 - **📂 Project-Centric Grouping**: Ports automatically categorized into logical collections—Web Development Servers, Databases, Docker containers, System Daemons, and Utilities.
 - **📡 Background HTTP Server Engine**: Runs an lightweight Tiny HTTP service on port `12200` to feed external browser extensions, terminal CLI clients, or custom dashboards.
 

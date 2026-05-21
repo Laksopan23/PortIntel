@@ -4,14 +4,12 @@ import {
   Activity, 
   Terminal, 
   Trash2, 
-  Sparkles, 
   RefreshCw, 
   Search, 
   Folder, 
   Cpu, 
   History, 
   X, 
-  Send, 
   Eye, 
   AlertTriangle,
   Info,
@@ -110,11 +108,10 @@ export default function App() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [serverUnreachable, setServerUnreachable] = useState(false);
 
-  // AI Drawer State
+  // Diagnostic Drawer State
   const [selectedPort, setSelectedPort] = useState<PortInfo | null>(null);
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant' | 'system'; content: string }>>([]);
-  const [currentAiInput, setCurrentAiInput] = useState('');
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -308,13 +305,13 @@ export default function App() {
     }
   };
 
-  // Ask AI Action
+  // Show Port Advisory
   const handleAskAI = async (port: PortInfo) => {
     setSelectedPort(port);
     setAiDrawerOpen(true);
     setAiLoading(true);
     setAiError(null);
-    setChatMessages([]);
+    setSelectedAnalysis(null);
 
     const context: PortContext = {
       port: port.port,
@@ -327,7 +324,7 @@ export default function App() {
 
     try {
       // Introduce minor diagnostic delay for premium UX
-      await new Promise(r => setTimeout(r, 350));
+      await new Promise(r => setTimeout(r, 200));
       const response = inspectPort(context);
       
       // Merge compiled-in ONNX classifications if available
@@ -346,9 +343,7 @@ export default function App() {
               : 'User application server or utility. Safe to terminate to free up socket resources.');
       }
 
-      const serializedResponse = JSON.stringify(response);
-      const initialAssistantMessage = { role: 'assistant' as const, content: serializedResponse };
-      setChatMessages([initialAssistantMessage]);
+      setSelectedAnalysis(response);
 
       // Save to logs
       const newLog: DiagnosticLog = {
@@ -358,7 +353,7 @@ export default function App() {
         processName: port.process_name,
         pid: port.pid,
         protocol: port.protocol,
-        analysis: serializedResponse,
+        analysis: JSON.stringify(response),
         followUps: []
       };
 
@@ -373,74 +368,7 @@ export default function App() {
     }
   };
 
-  // Send follow-up AI message
-  const handleSendFollowUp = async () => {
-    if (!currentAiInput.trim() || !selectedPort || aiLoading) return;
-
-    const userMsg = currentAiInput.trim();
-    setCurrentAiInput('');
-    setAiLoading(true);
-    setAiError(null);
-
-    const updatedMessages = [
-      ...chatMessages,
-      { role: 'user' as const, content: userMsg }
-    ];
-    setChatMessages(updatedMessages);
-
-    const context: PortContext = {
-      port: selectedPort.port,
-      processName: selectedPort.process_name,
-      pid: selectedPort.pid,
-      protocol: selectedPort.protocol,
-      user: selectedPort.user,
-      os: os
-    };
-
-    try {
-      // Simulate minor UX response delay
-      await new Promise(r => setTimeout(r, 400));
-      const diagnosis = inspectPort(context);
-
-      let response = '';
-      const text = userMsg.toLowerCase();
-      if (text.includes('kill') || text.includes('stop') || text.includes('close') || text.includes('terminate')) {
-        response = `To safely stop this process, run this in your terminal:\n\`${diagnosis.gracefulCommand}\`\n\nOr click the red 'Kill' button in the dashboard to force-terminate it.`;
-      } else if (text.includes('why') || text.includes('what') || text.includes('describe') || text.includes('who')) {
-        response = `This process is categorized as a ${diagnosis.category}. ${diagnosis.description}\n\nOur offline Decision Tree classifier evaluated this connection.`;
-      } else if (text.includes('safe') || text.includes('danger') || text.includes('warning') || text.includes('caution')) {
-        response = `The safety level is designated as **${diagnosis.safety.toUpperCase()}**.\nGuidance: ${diagnosis.recommendation}`;
-      } else if (text.includes('port') || text.includes('host') || text.includes('bind')) {
-        response = `This process is bound to port :${selectedPort.port} using protocol ${selectedPort.protocol.toUpperCase()} under PID ${selectedPort.pid}.`;
-      } else {
-        response = `This is a local, offline machine learning diagnostic assistant. For this port (${selectedPort.process_name}:${selectedPort.port}), the recommended graceful stop command is: \n\`${diagnosis.gracefulCommand}\`.`;
-      }
-
-      setChatMessages(prev => [
-        ...prev,
-        { role: 'assistant' as const, content: response }
-      ]);
-
-      // Update followups in diagnostics logs if found
-      const matchIndex = diagnosticLogs.findIndex(log => log.port === selectedPort.port && log.pid === selectedPort.pid);
-      if (matchIndex !== -1) {
-        const updated = [...diagnosticLogs];
-        updated[matchIndex].followUps.push(
-          { role: 'user', content: userMsg },
-          { role: 'assistant', content: response }
-        );
-        setDiagnosticLogs(updated);
-        localStorage.setItem('portintel_diagnostic_logs', JSON.stringify(updated));
-      }
-
-    } catch (err: any) {
-      setAiError('Inference error.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  // Load log history conversation
+  // Load log history
   const handleViewHistoricalLog = (log: DiagnosticLog) => {
     const mockPort: PortInfo = {
       port: log.port,
@@ -453,14 +381,12 @@ export default function App() {
     setAiDrawerOpen(true);
     setAiError(null);
     
-    // Reconstruct messages
-    const reconstructed: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
-      { role: 'assistant', content: log.analysis }
-    ];
-    log.followUps.forEach(f => {
-      reconstructed.push({ role: f.role, content: f.content });
-    });
-    setChatMessages(reconstructed);
+    try {
+      const parsed = JSON.parse(log.analysis);
+      setSelectedAnalysis(parsed);
+    } catch (e) {
+      setAiError('Failed to load archived diagnostic data.');
+    }
   };
 
   if (serverUnreachable) {
@@ -532,7 +458,7 @@ export default function App() {
               className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'logs' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
             >
               <History className="h-4.5 w-4.5" />
-              <span>AI Diagnostics Logs</span>
+              <span>Diagnostic History</span>
               <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{diagnosticLogs.length}</span>
             </button>
           </nav>
@@ -557,7 +483,7 @@ export default function App() {
             <h1 className="text-xl font-bold tracking-tight">
               {activeTab === 'all' && 'Active Network Connections'}
               {activeTab === 'projects' && 'Grouped Network Projects'}
-              {activeTab === 'logs' && 'AI Analysis Archives'}
+              {activeTab === 'logs' && 'Diagnostic Archives'}
             </h1>
           </div>
 
@@ -584,9 +510,9 @@ export default function App() {
               <span>Refresh</span>
             </button>
 
-            {/* Global AI Toggle */}
+            {/* Global Diagnostic Toggle */}
             <div className="flex items-center space-x-2 border-l border-slate-800 pl-4">
-              <span className="text-xs text-slate-400 font-medium">AI Insights</span>
+              <span className="text-xs text-slate-400 font-medium">ML Diagnostics</span>
               <button 
                 onClick={() => setAiEnabled(!aiEnabled)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${aiEnabled ? 'bg-brand-500' : 'bg-slate-800'}`}
@@ -693,8 +619,8 @@ export default function App() {
                                   onClick={() => handleAskAI(port)}
                                   className="flex items-center space-x-1 rounded-md bg-brand-600/10 hover:bg-brand-600/20 border border-brand-500/20 hover:border-brand-500/40 px-2.5 py-1.5 text-xs text-brand-300 font-semibold transition-all duration-200"
                                 >
-                                  <Sparkles className="h-3.5 w-3.5" />
-                                  <span>Advisory</span>
+                                  <Info className="h-3.5 w-3.5" />
+                                  <span>Inspect</span>
                                 </button>
                               )}
                               
@@ -812,14 +738,8 @@ export default function App() {
                             }
                           })()}
                         </p>
-                        <div className="text-[11px] text-slate-500 flex items-center space-x-2">
+                        <div className="text-[11px] text-slate-500">
                           <span>Analyzed at {log.timestamp}</span>
-                          {log.followUps.length > 0 && (
-                            <>
-                              <span>•</span>
-                              <span className="text-brand-400 font-semibold">{log.followUps.length / 2} Follow-up Qs</span>
-                            </>
-                          )}
                         </div>
                       </div>
                       
@@ -926,14 +846,14 @@ export default function App() {
 
 
 
-        {/* AI ANALYSIS DRAWER */}
+        {/* DIAGNOSTIC DETAILS DRAWER */}
         <div className={`fixed top-0 right-0 h-full w-[450px] z-40 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${aiDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-800/80 bg-slate-950/40 flex items-center justify-between">
             <div className="flex items-center space-x-2 text-brand-400">
-              <Sparkles className="h-5 w-5 animate-glow" />
+              <Info className="h-5 w-5" />
               <div>
-                <h3 className="font-bold text-slate-200">PortIntel Diagnostic Assistant</h3>
+                <h3 className="font-bold text-slate-200">Port Diagnostics</h3>
                 {selectedPort && (
                   <span className="block text-[11px] text-slate-400 font-mono mt-0.5">
                     Port :{selectedPort.port} | {selectedPort.process_name} (PID: {selectedPort.pid})
@@ -950,152 +870,131 @@ export default function App() {
           </div>
 
           {/* Drawer Message Body */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {aiLoading && chatMessages.length === 0 ? (
+          <div className="flex-1 overflow-y-auto p-5 space-y-5">
+            {aiLoading ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center space-y-3">
                 <div className="relative">
                   <div className="h-10 w-10 rounded-full border-2 border-brand-500/20 border-t-brand-500 animate-spin" />
-                  <Sparkles className="h-4 w-4 text-brand-400 absolute inset-0 m-auto" />
+                  <Info className="h-4 w-4 text-brand-400 absolute inset-0 m-auto" />
                 </div>
                 <div>
-                  <span className="font-bold block text-sm text-slate-300">Analyzing Binding Daemon...</span>
-                  <span className="text-xs text-slate-500 block mt-1">Interrogating port details with AI Engine</span>
+                  <span className="font-bold block text-sm text-slate-300">Analyzing Port...</span>
+                  <span className="text-xs text-slate-500 block mt-1">Running local heuristics and ML inference</span>
+                </div>
+              </div>
+            ) : aiError ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-4">
+                <div className="rounded-lg bg-red-950/30 border border-red-900/50 p-4 text-xs text-red-400 font-medium text-left max-w-sm">
+                  <span className="block font-bold mb-1 text-sm">Diagnostic Fault:</span>
+                  {aiError}
+                </div>
+              </div>
+            ) : selectedAnalysis ? (
+              <div className="space-y-5">
+                {/* Status Badges */}
+                <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Diagnostic Report
+                  </span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                    selectedAnalysis.safety === 'Dangerous' || selectedAnalysis.safety === 'Dangerous to Kill'
+                      ? 'bg-red-950/40 border-red-500/30 text-red-400'
+                      : selectedAnalysis.safety === 'Caution'
+                        ? 'bg-amber-950/40 border-amber-500/30 text-amber-400'
+                        : 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                  }`}>
+                    {selectedAnalysis.safety === 'Dangerous' || selectedAnalysis.safety === 'Dangerous to Kill'
+                      ? 'Protected / Do Not Kill'
+                      : selectedAnalysis.safety === 'Caution'
+                        ? 'Caution Required'
+                        : 'Safe to Terminate'}
+                  </span>
+                </div>
+
+                {/* Details Section */}
+                <div className="space-y-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 bg-slate-950/40 border border-slate-900 rounded-lg p-3">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Port binding</span>
+                      <span className="font-mono font-bold text-brand-400">:{selectedPort?.port} ({selectedPort?.protocol})</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Process ID</span>
+                      <span className="font-mono text-slate-300">{selectedPort?.pid}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Process Name</span>
+                      <span className="font-semibold text-slate-300">{selectedPort?.process_name}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">User Owner</span>
+                      <span className="text-slate-300">{selectedPort?.user}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Classification</span>
+                    <div>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold tracking-wide uppercase border bg-slate-800 border-slate-700 text-slate-300">
+                        {selectedAnalysis.category}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Description</span>
+                    <p className="text-slate-300 leading-relaxed text-xs">{selectedAnalysis.description}</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Advisory & Recommendation</span>
+                    <p className="text-slate-300 leading-relaxed text-xs">{selectedAnalysis.recommendation}</p>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-850 space-y-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Graceful Stop Command</span>
+                    <div className="flex items-center justify-between bg-slate-950 border border-slate-850 rounded px-2.5 py-1.5 font-mono text-xs text-slate-300">
+                      <span className="truncate select-all">{selectedAnalysis.gracefulCommand}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(selectedAnalysis.gracefulCommand)}
+                        className="text-brand-400 hover:text-brand-300 font-bold uppercase text-[10px] pl-2.5 border-l border-slate-800 shrink-0"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Direct Action Button in Drawer */}
+                <div className="pt-5 border-t border-slate-850">
+                  {selectedAnalysis.safety === 'Dangerous' || selectedAnalysis.safety === 'Dangerous to Kill' || selectedAnalysis.safety === 'DANGEROUS_TO_KILL' ? (
+                    <div className="flex items-center space-x-2 text-xs text-slate-500 bg-slate-950/60 border border-slate-900 rounded-lg p-3">
+                      <Shield className="h-5 w-5 text-red-500 shrink-0" />
+                      <span>This is a critical system dependency. Direct termination is disabled to prevent workstation crashes.</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        if (selectedPort) {
+                          setPortToKill(selectedPort);
+                          setKillConfirmInput('');
+                          setKillError(null);
+                        }
+                      }}
+                      className="w-full flex items-center justify-center space-x-2 rounded-lg bg-red-650 hover:bg-red-600 hover:text-white py-2.5 text-xs font-semibold text-red-200 transition"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Terminate Process Binding</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                {chatMessages.map((msg, index) => {
-                  let isStructured = false;
-                  let structuredData: any = null;
-                  
-                  if (msg.role === 'assistant') {
-                    try {
-                      const parsed = JSON.parse(msg.content);
-                      if (parsed && parsed.isStructured) {
-                        isStructured = true;
-                        structuredData = parsed;
-                      }
-                    } catch (e) {
-                      // Not JSON
-                    }
-                  }
-
-                  if (isStructured && structuredData) {
-                    const safetyColors = {
-                      Safe: 'bg-emerald-950/40 border-emerald-500/20 text-emerald-400',
-                      Caution: 'bg-amber-950/40 border-amber-500/20 text-amber-400',
-                      Dangerous: 'bg-red-950/40 border-red-500/20 text-red-400'
-                    };
-
-                    const safetyText = {
-                      Safe: 'Safe to Terminate',
-                      Caution: 'Use Caution',
-                      Dangerous: 'CRITICAL - DO NOT KILL'
-                    };
-
-                    return (
-                      <div 
-                        key={index}
-                        className="w-full bg-slate-950/50 border border-slate-800/50 rounded-xl p-4 text-xs space-y-4 mr-auto shadow-inner"
-                      >
-                        <div className="flex items-center justify-between border-b border-slate-800/40 pb-2">
-                          <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                            Local Diagnostic Report
-                          </span>
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${safetyColors[structuredData.safety as 'Safe' | 'Caution' | 'Dangerous']}`}>
-                            {safetyText[structuredData.safety as 'Safe' | 'Caution' | 'Dangerous']}
-                          </span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Classification:</span>
-                          <span className="block text-slate-200 font-bold text-xs">{structuredData.category}</span>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Description:</span>
-                          <p className="text-slate-300 leading-relaxed font-sans">{structuredData.description}</p>
-                        </div>
-
-                        <div className="space-y-1">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Safety Guidance:</span>
-                          <p className="text-slate-300 leading-relaxed font-sans">{structuredData.recommendation}</p>
-                        </div>
-
-                        <div className="pt-3 border-t border-slate-800/40 space-y-1">
-                          <span className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Graceful Stop Command:</span>
-                          <div className="flex items-center justify-between bg-slate-950 border border-slate-850 rounded px-2.5 py-1.5 font-mono text-[10px] text-slate-300">
-                            <span className="truncate select-all">{structuredData.gracefulCommand}</span>
-                            <button
-                              onClick={() => navigator.clipboard.writeText(structuredData.gracefulCommand)}
-                              className="text-brand-400 hover:text-brand-300 font-bold uppercase text-[9px] pl-2.5 border-l border-slate-800 shrink-0"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <div 
-                      key={index}
-                      className={`flex flex-col max-w-[85%] rounded-xl p-3 text-xs leading-relaxed ${
-                        msg.role === 'user' 
-                          ? 'bg-brand-600/10 border border-brand-500/20 text-brand-200 ml-auto' 
-                          : 'bg-slate-950/60 border border-slate-800/40 text-slate-300 mr-auto'
-                      }`}
-                    >
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                        {msg.role === 'user' ? 'Developer' : 'PortIntel AI'}
-                      </span>
-                      <p className="whitespace-pre-wrap select-text selection:bg-brand-500 selection:text-white font-sans">{msg.content}</p>
-                    </div>
-                  );
-                })}
-
-                {aiLoading && (
-                  <div className="bg-slate-950/60 border border-slate-800/40 text-slate-400 mr-auto rounded-xl p-3 text-xs max-w-[85%] flex items-center space-x-2">
-                    <div className="flex space-x-1">
-                      <div className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="h-1.5 w-1.5 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                    <span>Processing details...</span>
-                  </div>
-                )}
-
-                {aiError && (
-                  <div className="rounded-lg bg-red-950/30 border border-red-900/50 p-3 text-xs text-red-400 font-medium">
-                    <span className="block font-bold">API Diagnostic Fault:</span>
-                    {aiError}
-                  </div>
-                )}
+              <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center">
+                <Info className="h-8 w-8 text-slate-600 mb-2" />
+                <span>No port selected</span>
               </div>
             )}
-          </div>
-
-          {/* Drawer Footer Input */}
-          <div className="p-3 border-t border-slate-800 bg-slate-950/60 flex items-center space-x-2">
-            <input 
-              type="text"
-              placeholder="Ask for details or stop commands..."
-              value={currentAiInput}
-              onChange={(e) => setCurrentAiInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSendFollowUp();
-              }}
-              disabled={aiLoading || !selectedPort}
-              className="flex-1 rounded-lg bg-slate-950 border border-slate-850 py-2 px-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 disabled:opacity-50"
-            />
-            <button 
-              onClick={handleSendFollowUp}
-              disabled={aiLoading || !selectedPort || !currentAiInput.trim()}
-              className="p-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white disabled:opacity-50 transition"
-            >
-              <Send className="h-4 w-4" />
-            </button>
           </div>
         </div>
 
