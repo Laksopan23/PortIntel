@@ -276,6 +276,17 @@ async fn kill_process(pid: u32) -> Result<(), String> {
     }
 }
 
+use std::sync::OnceLock;
+
+type TractPlan = tract_onnx::prelude::SimplePlan<
+    tract_onnx::prelude::TypedModel,
+    tract_onnx::prelude::TypedFact,
+    Box<dyn tract_onnx::prelude::TypedOp>,
+>;
+
+static IMPORTANCE_MODEL: OnceLock<TractPlan> = OnceLock::new();
+static SAFETY_MODEL: OnceLock<TractPlan> = OnceLock::new();
+
 #[derive(Serialize, Clone, Debug)]
 pub struct LocalAnalysis {
     category: String,
@@ -365,11 +376,13 @@ async fn analyze_port_local(port: u32, process_name: &str, is_system: bool) -> R
         let input = tract_onnx::prelude::Tensor::from(input_data);
 
         // 1. Run Importance Inference
-        let importance_model = tract_onnx::onnx()
-            .model_for_read(&mut &importance_bytes[..])
-            .map_err(|e| format!("Failed to read ONNX importance model: {}", e))?;
-        let importance_plan = importance_model.into_runnable()
-            .map_err(|e| format!("Failed to compile importance model plan: {}", e))?;
+        let importance_plan = IMPORTANCE_MODEL.get_or_try_init(|| {
+            let model = tract_onnx::onnx()
+                .model_for_read(&mut &importance_bytes[..])
+                .map_err(|e| format!("Failed to read ONNX importance model: {}", e))?;
+            model.into_runnable()
+                .map_err(|e| format!("Failed to compile importance model plan: {}", e))
+        })?;
         let importance_result = importance_plan.run(vec![input.clone().into()].into())
             .map_err(|e| format!("Importance model inference error: {}", e))?;
 
@@ -379,11 +392,13 @@ async fn analyze_port_local(port: u32, process_name: &str, is_system: bool) -> R
         let importance_pred = importance_labels.iter().next().copied().unwrap_or(2);
 
         // 2. Run Safety Inference
-        let safety_model = tract_onnx::onnx()
-            .model_for_read(&mut &safety_bytes[..])
-            .map_err(|e| format!("Failed to read ONNX safety model: {}", e))?;
-        let safety_plan = safety_model.into_runnable()
-            .map_err(|e| format!("Failed to compile safety model plan: {}", e))?;
+        let safety_plan = SAFETY_MODEL.get_or_try_init(|| {
+            let model = tract_onnx::onnx()
+                .model_for_read(&mut &safety_bytes[..])
+                .map_err(|e| format!("Failed to read ONNX safety model: {}", e))?;
+            model.into_runnable()
+                .map_err(|e| format!("Failed to compile safety model plan: {}", e))
+        })?;
         let safety_result = safety_plan.run(vec![input.into()].into())
             .map_err(|e| format!("Safety model inference error: {}", e))?;
 

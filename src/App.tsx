@@ -19,7 +19,8 @@ import {
   Layers,
   Shield,
   CheckCircle,
-  Menu
+  Menu,
+  ChevronDown
 } from 'lucide-react';
 import { inspectPort, PortContext } from './aiService';
 
@@ -101,6 +102,24 @@ async function apiInvoke<T>(cmd: string, args?: any): Promise<T> {
   }
 }
 
+function isSystemPort(port: PortInfo): boolean {
+  const processLower = port.process_name?.toLowerCase() || '';
+  const userLower = port.user?.toLowerCase() || '';
+  return port.port < 1024 ||
+         userLower.includes('system') || 
+         userLower.includes('root') || 
+         userLower.includes('_mdns') || 
+         processLower === 'system' ||
+         processLower.includes('svchost') ||
+         processLower.includes('lsass') ||
+         processLower.includes('wininit') ||
+         processLower.includes('services') ||
+         processLower.includes('spoolsv') ||
+         processLower.includes('smss') ||
+         processLower.includes('csrss') ||
+         processLower.includes('winlogon');
+}
+
 export default function App() {
   // Environment detection
   const isExtension = useMemo(() => {
@@ -114,6 +133,15 @@ export default function App() {
   const [portAnalyses, setPortAnalyses] = useState<Record<string, { category: string; importance: string; safety: string; reasoning: string }>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [showSystemPorts, setShowSystemPorts] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    const isExtensionOrWeb = 
+      window.location.protocol === 'chrome-extension:' ||
+      window.location.search.includes('env=extension') ||
+      !(window as any).__TAURI_INTERNALS__;
+    return !isExtensionOrWeb;
+  });
   const [activeTab, setActiveTab] = useState<'all' | 'projects' | 'logs'>('all');
   const [aiEnabled, setAiEnabled] = useState(true);
   const [serverUnreachable, setServerUnreachable] = useState(false);
@@ -261,16 +289,36 @@ export default function App() {
 
 
 
-  // Filter ports based on search query
+  // Filter ports based on search query, category, and system port status
   const filteredPorts = useMemo(() => {
-    return ports.filter(p => 
-      p.port?.toString().includes(searchQuery) ||
-      p.process_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.pid?.toString().includes(searchQuery) ||
-      p.protocol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.user?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [ports, searchQuery]);
+    return ports.filter(p => {
+      const matchesSearch = 
+        p.port?.toString().includes(searchQuery) ||
+        p.process_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.pid?.toString().includes(searchQuery) ||
+        p.protocol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.user?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      if (!matchesSearch) return false;
+
+      // Filter system ports if toggled off
+      if (!showSystemPorts && isSystemPort(p)) {
+        return false;
+      }
+
+      // Filter by category
+      if (selectedCategory !== 'All') {
+        const key = `${p.port}-${p.pid}`;
+        const analysis = portAnalyses[key];
+        const category = analysis?.category || 'Unknown';
+        if (category !== selectedCategory) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [ports, searchQuery, showSystemPorts, selectedCategory, portAnalyses]);
 
   // Grouped Projects
   const groupedProjects = useMemo(() => {
@@ -684,7 +732,54 @@ export default function App() {
           
           {/* TAB 1: ALL ACTIVE PORTS */}
           {activeTab === 'all' && (
-            <div className="rounded-xl border border-slate-800/80 bg-slate-900/20 backdrop-blur-md overflow-hidden">
+            <div className="space-y-4">
+              {/* FILTERS AND CONTROLS BAR */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-xl border border-slate-800/60 bg-slate-900/10 backdrop-blur-md">
+                <div className="flex items-center space-x-2.5">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filter Category:</span>
+                  <div className="relative">
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="appearance-none rounded-lg bg-slate-900 border border-slate-800 py-1.5 pl-3 pr-8 text-xs font-semibold text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="Dev Server">Dev Servers</option>
+                      <option value="Database">Databases</option>
+                      <option value="System Service">System Services</option>
+                      <option value="Docker Container">Docker Containers</option>
+                      <option value="Network Service">Network Services</option>
+                      <option value="Web Browser">Web Browsers</option>
+                      <option value="Communication App">Communication Apps</option>
+                      <option value="Remote Access">Remote Access</option>
+                      <option value="System Utility">System Utilities</option>
+                      <option value="Unknown">Unknown / Other</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* System Ports Filter Toggle */}
+                  <label className="flex items-center space-x-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={showSystemPorts}
+                      onChange={(e) => setShowSystemPorts(e.target.checked)}
+                      className="rounded border-slate-800 bg-slate-900 text-brand-600 focus:ring-brand-500 focus:ring-offset-slate-950 h-4 w-4 transition cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-300">Show OS System Ports</span>
+                  </label>
+                  
+                  <span className="text-xs text-slate-500 border-l border-slate-800 pl-4 hidden xs:inline">
+                    Showing <strong className="text-brand-400">{filteredPorts.length}</strong> of <strong className="text-slate-300">{ports.length}</strong> active connections
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-800/80 bg-slate-900/20 backdrop-blur-md overflow-hidden">
               <div className="overflow-x-auto w-full">
                 <table className="w-full text-left border-collapse min-w-[640px] md:min-w-0">
                   <thead>
@@ -816,7 +911,8 @@ export default function App() {
               </table>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
           {/* TAB 2: GROUPED PROJECTS */}
           {activeTab === 'projects' && (
