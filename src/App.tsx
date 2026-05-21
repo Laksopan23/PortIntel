@@ -577,7 +577,7 @@ export default function App() {
       
       {/* MOBILE SIDEBAR OVERLAY */}
       {mobileSidebarOpen && (
-        <div className="fixed inset-0 z-45 flex md:hidden">
+        <div className={`fixed inset-0 z-45 flex ${isExtension ? '' : 'md:hidden'}`}>
           {/* Backdrop */}
           <div 
             onClick={() => setMobileSidebarOpen(false)}
