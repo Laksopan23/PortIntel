@@ -141,6 +141,47 @@ y = np.array([
     [2, 1], # 8085 (system user unknown) -> Unknown, Dangerous
 ], dtype=np.int64)
 
+vocab_names = {
+    0: "unknown",
+    1: "node",
+    2: "vite",
+    3: "postgres",
+    4: "mysql",
+    5: "redis",
+    6: "mongo",
+    7: "docker",
+    8: "ssh",
+    9: "nginx",
+    10: "w3svc",
+    11: "svchost",
+    12: "system",
+    13: "mdnsresponder",
+    14: "python",
+    15: "chrome",
+    16: "slack",
+    17: "anydesk",
+    18: "explorer"
+}
+
+def extend_features(X_old):
+    X_new = []
+    for row in X_old:
+        port = row[0]
+        is_system = row[1]
+        cat_idx = int(row[2])
+        os_val = row[3]
+        
+        name = vocab_names.get(cat_idx, "unknown")
+        name_len = len(name)
+        
+        is_well_known = 1.0 if port < 1024 else 0.0
+        is_common_dev_port = 1.0 if port in [3000, 5000, 8000, 8080, 5173, 8081, 4200, 5432, 3306, 6379, 27017] else 0.0
+        
+        X_new.append([port, is_system, float(cat_idx), os_val, is_well_known, float(name_len), is_common_dev_port])
+    return np.array(X_new, dtype=np.float32)
+
+X_extended = extend_features(X)
+
 # Create assets folder in tauri backend relative to script path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 assets_dir = os.path.join(script_dir, "src-tauri", "assets")
@@ -149,11 +190,11 @@ os.makedirs(assets_dir, exist_ok=True)
 # 1. Train Importance Decision Tree Model
 print("Training Importance Model...")
 clf_importance = DecisionTreeClassifier(max_depth=5, random_state=42)
-clf_importance.fit(X, y[:, 0])
+clf_importance.fit(X_extended, y[:, 0])
 
 # Convert Importance model to ONNX format
 print("Converting Importance Model to ONNX...")
-initial_type = [('input', FloatTensorType([None, 4]))]
+initial_type = [('input', FloatTensorType([None, 7]))]
 onx_importance = convert_sklearn(clf_importance, initial_types=initial_type, options={'zipmap': False})
 
 onnx_path_imp = os.path.join(assets_dir, "port_classifier_importance.onnx")
@@ -164,7 +205,7 @@ print(f"Importance model successfully saved to {onnx_path_imp}!")
 # 2. Train Safety Decision Tree Model
 print("Training Safety Model...")
 clf_safety = DecisionTreeClassifier(max_depth=5, random_state=42)
-clf_safety.fit(X, y[:, 1])
+clf_safety.fit(X_extended, y[:, 1])
 
 # Convert Safety model to ONNX format
 print("Converting Safety Model to ONNX...")

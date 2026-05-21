@@ -28,6 +28,7 @@ interface PortInfo {
   process_name: string;
   protocol: string;
   user: string;
+  memory?: string;
 }
 
 interface DiagnosticLog {
@@ -645,8 +646,11 @@ export default function App() {
                               :{port.port}
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-semibold text-slate-200">
-                            {port.process_name}
+                          <td className="py-3 px-4">
+                            <span className="font-semibold text-slate-200 block">{port.process_name}</span>
+                            {port.memory && (
+                              <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">{port.memory}</span>
+                            )}
                           </td>
                           <td className="py-3 px-4 font-mono text-slate-400">
                             {port.pid}
@@ -751,8 +755,13 @@ export default function App() {
                       
                       <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-2 max-h-48 overflow-y-auto">
                         {group.ports.map((port) => (
-                          <div key={`${port.port}-${port.pid}`} className="flex items-center justify-between text-xs py-1 hover:bg-slate-800/30 px-1 rounded transition">
-                            <span className="font-mono font-bold text-brand-400">:{port.port}</span>
+                          <div key={`${port.port}-${port.pid}`} className="flex items-center justify-between text-xs py-1.5 hover:bg-slate-800/30 px-1 rounded transition">
+                            <div className="flex flex-col">
+                              <span className="font-mono font-bold text-brand-400">:{port.port}</span>
+                              {port.memory && (
+                                <span className="text-[9px] text-slate-500 font-mono mt-0.5">{port.memory}</span>
+                              )}
+                            </div>
                             <span className="text-slate-300 font-semibold">{port.process_name}</span>
                             <span className="text-slate-500 font-mono">PID {port.pid}</span>
                           </div>
@@ -998,6 +1007,12 @@ export default function App() {
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">User Owner</span>
                       <span className="text-slate-300">{selectedPort?.user}</span>
                     </div>
+                    {selectedPort?.memory && (
+                      <div className="col-span-2 border-t border-slate-900/60 pt-2.5 mt-0.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Memory Footprint</span>
+                        <span className="text-xs font-mono text-slate-300 block mt-0.5">{selectedPort.memory}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-1">

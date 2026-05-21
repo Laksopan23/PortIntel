@@ -11,6 +11,7 @@ pub struct PortInfo {
     process_name: String,
     protocol: String,
     user: String,
+    memory: String,
 }
 
 #[tauri::command]
@@ -27,7 +28,7 @@ async fn get_active_ports() -> Result<Vec<PortInfo>, String> {
 
 #[cfg(target_os = "windows")]
 async fn get_active_ports_windows() -> Result<Vec<PortInfo>, String> {
-    // 1. Get process names using tasklist
+    // 1. Get process names & memory using tasklist
     let mut pid_to_name = HashMap::new();
     let tasklist_output = Command::new("tasklist")
         .args(&["/FO", "CSV", "/NH"])
@@ -40,8 +41,13 @@ async fn get_active_ports_windows() -> Result<Vec<PortInfo>, String> {
         if parts.len() >= 2 {
             let name = parts[0].trim_matches('"').to_string();
             let pid_str = parts[1].trim_matches('"');
+            let memory = if parts.len() >= 5 {
+                parts[4].trim_matches('"').trim_matches('\\').to_string()
+            } else {
+                "Unknown".to_string()
+            };
             if let Ok(pid) = pid_str.parse::<u32>() {
-                pid_to_name.insert(pid, name);
+                pid_to_name.insert(pid, (name, memory));
             }
         }
     }
@@ -71,13 +77,16 @@ async fn get_active_ports_windows() -> Result<Vec<PortInfo>, String> {
                     let pid_str = tokens[4];
                     if let Ok(pid) = pid_str.parse::<u32>() {
                         if let Some(port) = parse_windows_port(local_addr) {
-                            let process_name = pid_to_name.get(&pid).cloned().unwrap_or_else(|| "Unknown".to_string());
+                            let (process_name, memory) = pid_to_name.get(&pid)
+                                .cloned()
+                                .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
                             ports.push(PortInfo {
                                 port,
                                 pid,
                                 process_name,
                                 protocol: "TCP".to_string(),
                                 user: "N/A".to_string(),
+                                memory,
                             });
                         }
                     }
@@ -91,13 +100,16 @@ async fn get_active_ports_windows() -> Result<Vec<PortInfo>, String> {
                 let pid_str = tokens[3];
                 if let Ok(pid) = pid_str.parse::<u32>() {
                     if let Some(port) = parse_windows_port(local_addr) {
-                        let process_name = pid_to_name.get(&pid).cloned().unwrap_or_else(|| "Unknown".to_string());
+                        let (process_name, memory) = pid_to_name.get(&pid)
+                            .cloned()
+                            .unwrap_or_else(|| ("Unknown".to_string(), "Unknown".to_string()));
                         ports.push(PortInfo {
                             port,
                             pid,
                             process_name,
                             protocol: "UDP".to_string(),
                             user: "N/A".to_string(),
+                            memory,
                         });
                     }
                 }
@@ -133,6 +145,22 @@ async fn get_active_ports_unix() -> Result<Vec<PortInfo>, String> {
         .map_err(|e| format!("Failed to execute lsof: {}", e))?;
 
     let lsof_stdout = String::from_utf8_lossy(&lsof_output.stdout);
+    
+    // Fetch process memory usage RSS in KB
+    let mut pid_to_mem = HashMap::new();
+    if let Ok(ps_output) = Command::new("ps").args(&["-A", "-o", "pid,rss"]).output() {
+        let ps_stdout = String::from_utf8_lossy(&ps_output.stdout);
+        for line in ps_stdout.lines().skip(1) {
+            let tokens: Vec<&str> = line.split_whitespace().collect();
+            if tokens.len() >= 2 {
+                if let (Ok(pid), Ok(rss)) = (tokens[0].parse::<u32>(), tokens[1].parse::<u64>()) {
+                    let mem_mb = rss as f64 / 1024.0;
+                    pid_to_mem.insert(pid, format!("{:.1} MB", mem_mb));
+                }
+            }
+        }
+    }
+
     let mut ports = Vec::new();
 
     for line in lsof_stdout.lines() {
@@ -160,12 +188,14 @@ async fn get_active_ports_unix() -> Result<Vec<PortInfo>, String> {
 
             if let Ok(pid) = pid_str.parse::<u32>() {
                 if let Some(port) = parse_unix_port(name) {
+                    let memory = pid_to_mem.get(&pid).cloned().unwrap_or_else(|| "Unknown".to_string());
                     ports.push(PortInfo {
                         port,
                         pid,
                         process_name,
                         protocol,
                         user,
+                        memory,
                     });
                 }
             }
@@ -321,8 +351,16 @@ async fn analyze_port_local(port: u32, process_name: &str, is_system: bool) -> R
 
     let run_inference = || -> Result<(String, String, String), String> {
         let input_data = tract_onnx::prelude::tract_ndarray::Array2::from_shape_vec(
-            (1, 4),
-            vec![port as f32, is_system_val, cat_val, os_val]
+            (1, 7),
+            vec![
+                port as f32, 
+                is_system_val, 
+                cat_val, 
+                os_val,
+                if port < 1024 { 1.0 } else { 0.0 },
+                process_name.len() as f32,
+                if [3000, 5000, 8000, 8080, 5173, 8081, 4200, 5432, 3306, 6379, 27017].contains(&(port as i32)) { 1.0 } else { 0.0 }
+            ]
         ).map_err(|e| format!("Failed to create input array: {}", e))?;
         let input = tract_onnx::prelude::Tensor::from(input_data);
 
