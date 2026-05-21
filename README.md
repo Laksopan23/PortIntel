@@ -27,6 +27,22 @@ Unlike generic port scanners, **PortIntel** embeds an offline-first **Decision T
 
 ---
 
+## 📸 User Interface Gallery
+
+| Active Connections Dashboard | AI Diagnostic Advisor Sheet |
+| :---: | :---: |
+| ![Active Ports](screenshots/allstocks.png) | ![Diagnostic Inspector](screenshots/inspect.png) |
+
+| Grouped Projects View | Diagnostic History Archives |
+| :---: | :---: |
+| ![Grouped Projects](screenshots/groupedproject.png) | ![Diagnostic Archives](screenshots/diagnosist.png) |
+
+| Category Filtering (Web Dev) | Safe Process Termination |
+| :---: | :---: |
+| ![Category Filters](screenshots/webdev.png) | ![Termination Confirmation](screenshots/successpopup.png) |
+
+---
+
 ## ✨ Key Features
 
 - **🔍 Comprehensive Socket Scanning**: Real-time detection of active ports on Windows (via `netstat`) and macOS/Linux (via `lsof`).
