@@ -9,7 +9,7 @@ import {
   Folder, 
   Cpu, 
   History, 
-  X, 
+  X,
   Eye, 
   AlertTriangle,
   Info,
@@ -17,7 +17,8 @@ import {
   Database,
   Globe,
   Layers,
-  Shield
+  Shield,
+  CheckCircle
 } from 'lucide-react';
 import { inspectPort, PortContext } from './aiService';
 
@@ -121,6 +122,9 @@ export default function App() {
   const [isKilling, setIsKilling] = useState(false);
   const [killError, setKillError] = useState<string | null>(null);
 
+  // Success Toast State
+  const [successToast, setSuccessToast] = useState<{ show: boolean; message: string; subMessage?: string } | null>(null);
+
   // Diagnostics Logs
   const [diagnosticLogs, setDiagnosticLogs] = useState<DiagnosticLog[]>(() => {
     const saved = localStorage.getItem('portintel_diagnostic_logs');
@@ -134,6 +138,16 @@ export default function App() {
     if (ua.includes('win')) return 'windows';
     return 'linux';
   }, []);
+
+  // Automatically clear toast notification after timeout
+  useEffect(() => {
+    if (successToast && successToast.show) {
+      const timer = setTimeout(() => {
+        setSuccessToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [successToast]);
 
   // Run local ONNX ML analysis for all ports automatically
   const analyzePorts = async (portList: PortInfo[]) => {
@@ -325,10 +339,26 @@ export default function App() {
     try {
       await apiInvoke('kill_process', { pid: portToKill.pid });
       
+      const terminatedProcName = portToKill.process_name;
+      const terminatedPort = portToKill.port;
+      const terminatedPid = portToKill.pid;
+
       // Update local ports immediately
       setPorts(prev => prev.filter(p => p.pid !== portToKill.pid));
       setPortToKill(null);
       setKillConfirmInput('');
+
+      // Show success toast
+      setSuccessToast({
+        show: true,
+        message: 'Process Terminated Successfully',
+        subMessage: `${terminatedProcName} (PID: ${terminatedPid}) binding port :${terminatedPort} has been killed.`
+      });
+
+      // Close drawer if it was inspecting the terminated port
+      if (selectedPort && selectedPort.pid === terminatedPid) {
+        setAiDrawerOpen(false);
+      }
     } catch (err: any) {
       console.error(err);
       setKillError(err?.toString() || 'Failed to kill process. Access denied or process already terminated.');
@@ -1035,6 +1065,27 @@ export default function App() {
             )}
           </div>
         </div>
+
+        {/* SUCCESS TOAST NOTIFICATION */}
+        {successToast && successToast.show && (
+          <div className="fixed top-6 right-6 z-50 flex items-center space-x-3 bg-slate-900/90 backdrop-blur border border-emerald-500/30 rounded-xl p-4 shadow-2xl animate-slide-in max-w-sm">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <CheckCircle className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-xs text-slate-100">{successToast.message}</h4>
+              {successToast.subMessage && (
+                <p className="text-[10px] text-slate-400 mt-0.5 leading-normal select-text selection:bg-brand-500">{successToast.subMessage}</p>
+              )}
+            </div>
+            <button 
+              onClick={() => setSuccessToast(null)}
+              className="text-slate-500 hover:text-slate-300 transition shrink-0 self-start mt-0.5"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
       </main>
     </div>
