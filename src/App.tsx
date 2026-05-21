@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { 
-  Activity, 
   Terminal, 
   Trash2, 
   RefreshCw, 
@@ -99,6 +98,41 @@ async function apiInvoke<T>(cmd: string, args?: any): Promise<T> {
     }
     throw e;
   }
+}
+
+interface LogoProps {
+  className?: string;
+  glow?: boolean;
+}
+
+function Logo({ className = "h-8 w-8", glow = true }: LogoProps) {
+  return (
+    <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="pi-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0e91e9" />
+          <stop offset="100%" stopColor="#06b6d4" />
+        </linearGradient>
+        <filter id="pi-logo-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0e91e9" floodOpacity="0.5"/>
+        </filter>
+      </defs>
+      <circle cx="50" cy="50" r="45" fill="#0f172a" stroke="url(#pi-logo-grad)" strokeWidth="4" />
+      <circle cx="50" cy="50" r="28" fill="#1e293b" />
+      <path 
+        d="M 50 12 A 38 38 0 0 1 88 50" 
+        fill="none" 
+        stroke="#0e91e9" 
+        strokeWidth="3" 
+        strokeLinecap="round" 
+        filter={glow ? "url(#pi-logo-glow)" : undefined}
+      />
+      <rect x="36" y="44" width="28" height="12" rx="2" fill="#334155" />
+      <circle cx="42" cy="50" r="2" fill="#06b6d4" />
+      <circle cx="50" cy="50" r="2" fill="#06b6d4" />
+      <circle cx="58" cy="50" r="2" fill="#06b6d4" />
+    </svg>
+  );
 }
 
 export default function App() {
@@ -497,8 +531,8 @@ export default function App() {
       <div className="flex h-full w-full flex-col items-center justify-center bg-slate-950 p-6 font-sans text-slate-100 antialiased animate-fade-in">
         <div className="max-w-md w-full rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center backdrop-blur-md shadow-2xl relative overflow-hidden">
           <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-tr from-brand-600 to-cyan-500 opacity-5 blur-2xl animate-pulse" />
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-500/10 text-brand-400 mb-6">
-            <Activity className="h-8 w-8 animate-glow" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center mb-6">
+            <Logo className="h-16 w-16 animate-glow" />
           </div>
           <h2 className="text-xl font-bold tracking-tight text-slate-100 font-sans">Desktop App Offline</h2>
           <p className="text-sm text-slate-400 mt-3 leading-relaxed font-sans font-medium">
@@ -539,9 +573,7 @@ export default function App() {
               {/* Logo & Close Button */}
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center space-x-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-tr from-brand-600 to-cyan-500 shadow-lg shadow-brand-500/20">
-                    <Activity className="h-5 w-5 text-white" />
-                  </div>
+                  <Logo className="h-9 w-9" />
                   <div>
                     <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">PortIntel</span>
                   </div>
@@ -598,9 +630,7 @@ export default function App() {
         <div className="space-y-6">
           {/* Logo */}
           <div className="flex items-center space-x-3 px-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-tr from-brand-600 to-cyan-500 shadow-lg shadow-brand-500/20">
-              <Activity className="h-5 w-5 text-white" />
-            </div>
+              <Logo className="h-9 w-9" />
             <div>
               <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">PortIntel</span>
               <span className="block text-[10px] text-slate-500 font-semibold tracking-wider uppercase">V2 PROT DETECT</span>
