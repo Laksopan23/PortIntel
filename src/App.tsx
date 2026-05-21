@@ -618,24 +618,24 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden bg-slate-950 relative">
         
         {/* TOP BAR */}
-        <header className="h-16 border-b border-slate-800/60 bg-slate-900/20 px-4 md:px-6 flex items-center justify-between backdrop-blur-md z-10">
-          <div className="flex items-center space-x-3">
+        <header className="h-16 border-b border-slate-800/60 bg-slate-900/20 px-4 md:px-6 flex items-center justify-between backdrop-blur-md z-10 gap-4 flex-shrink-0">
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
             <button 
               onClick={() => setMobileSidebarOpen(true)}
-              className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition md:hidden"
+              className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition md:hidden flex-shrink-0"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-base md:text-xl font-bold tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
+            <h1 className="text-base sm:text-lg lg:text-xl font-bold tracking-tight truncate">
               {activeTab === 'all' && 'Active Network Connections'}
               {activeTab === 'projects' && 'Grouped Network Projects'}
               {activeTab === 'logs' && 'Diagnostic Archives'}
             </h1>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
             {/* Search */}
-            <div className="relative w-28 xs:w-40 sm:w-52 md:w-64">
+            <div className="relative w-28 xs:w-36 sm:w-48 lg:w-64">
               <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" />
               <input 
                 type="text"
@@ -653,12 +653,12 @@ export default function App() {
               className="flex items-center space-x-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-300 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden lg:inline">Refresh</span>
             </button>
 
             {/* Global Diagnostic Toggle */}
-            <div className="flex items-center space-x-2 border-l border-slate-800 pl-2 sm:pl-4">
-              <span className="text-xs text-slate-400 font-medium hidden md:inline">ML Diagnostics</span>
+            <div className="flex items-center space-x-2 border-l border-slate-800 pl-2 sm:pl-3">
+              <span className="text-xs text-slate-400 font-medium hidden lg:inline">ML Diagnostics</span>
               <button 
                 onClick={() => setAiEnabled(!aiEnabled)}
                 className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${aiEnabled ? 'bg-brand-500' : 'bg-slate-800'}`}
@@ -676,15 +676,15 @@ export default function App() {
           {activeTab === 'all' && (
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/20 backdrop-blur-md overflow-hidden">
               <div className="overflow-x-auto w-full">
-                <table className="w-full text-left border-collapse min-w-[640px] md:min-w-0">
+                <table className="w-full text-left border-collapse min-w-[800px] xl:min-w-0">
                   <thead>
                     <tr className="border-b border-slate-800 bg-slate-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400">
                       <th className="py-3 px-4 w-24 sm:w-28">Port</th>
                       <th className="py-3 px-4">Process Name</th>
                       <th className="py-3 px-4 w-20 sm:w-28">PID</th>
-                      <th className="py-3 px-4 w-20 sm:w-24 hidden md:table-cell">Protocol</th>
-                      <th className="py-3 px-4 w-28 sm:w-32 hidden sm:table-cell">Importance</th>
-                      <th className="py-3 px-4 hidden lg:table-cell">Action Advisory</th>
+                      <th className="py-3 px-4 w-20 sm:w-24 hidden lg:table-cell">Protocol</th>
+                      <th className="py-3 px-4 w-28 sm:w-32 hidden md:table-cell">Importance</th>
+                      <th className="py-3 px-4 hidden xl:table-cell">Action Advisory</th>
                       <th className="py-3 px-4 text-right w-36 sm:w-44">Actions</th>
                     </tr>
                   </thead>
@@ -733,10 +733,10 @@ export default function App() {
                           <td className="py-3 px-4 font-mono text-slate-400">
                             {port.pid}
                           </td>
-                          <td className="py-3 px-4 hidden md:table-cell">
+                          <td className="py-3 px-4 hidden lg:table-cell">
                             <span className="text-xs text-slate-400 font-mono font-semibold">{port.protocol}</span>
                           </td>
-                          <td className="py-3 px-4 hidden sm:table-cell">
+                          <td className="py-3 px-4 hidden md:table-cell">
                             {analysis ? (
                               <span className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase border ${
                                 isCritical 
@@ -752,7 +752,7 @@ export default function App() {
                               <span className="text-xs text-slate-600 animate-pulse">Scanning...</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 max-w-xs truncate hidden lg:table-cell" title={analysis?.reasoning}>
+                          <td className="py-3 px-4 text-xs text-slate-400 max-w-xs truncate hidden xl:table-cell" title={analysis?.reasoning}>
                             {analysis ? (
                               <span className="flex items-center space-x-1.5">
                                 <span className={`h-1.5 w-1.5 rounded-full ${isDangerousToKill ? 'bg-red-500 animate-ping' : 'bg-emerald-500'}`} />
