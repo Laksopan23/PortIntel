@@ -18,7 +18,8 @@ import {
   Globe,
   Layers,
   Shield,
-  CheckCircle
+  CheckCircle,
+  Menu
 } from 'lucide-react';
 import { inspectPort, PortContext } from './aiService';
 
@@ -109,6 +110,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<'all' | 'projects' | 'logs'>('all');
   const [aiEnabled, setAiEnabled] = useState(true);
   const [serverUnreachable, setServerUnreachable] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Diagnostic Drawer State
   const [selectedPort, setSelectedPort] = useState<PortInfo | null>(null);
@@ -490,8 +492,77 @@ export default function App() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
       
-      {/* SIDEBAR */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-900/60 p-4 flex flex-col justify-between backdrop-blur-md">
+      {/* MOBILE SIDEBAR OVERLAY */}
+      {mobileSidebarOpen && (
+        <div className="fixed inset-0 z-45 flex md:hidden">
+          {/* Backdrop */}
+          <div 
+            onClick={() => setMobileSidebarOpen(false)}
+            className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity" 
+          />
+          
+          {/* Floating Sidebar Sheet */}
+          <aside className="relative flex w-64 max-w-xs flex-col bg-slate-900 border-r border-slate-850 p-4 justify-between h-full z-50 animate-slide-in">
+            <div className="space-y-6">
+              {/* Logo & Close Button */}
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-tr from-brand-600 to-cyan-500 shadow-lg shadow-brand-500/20">
+                    <Activity className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">PortIntel</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className="text-slate-400 hover:text-slate-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Navigation */}
+              <nav className="space-y-1">
+                <button 
+                  onClick={() => { setActiveTab('all'); setMobileSidebarOpen(false); }}
+                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'all' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+                >
+                  <Terminal className="h-4.5 w-4.5" />
+                  <span>All Active Ports</span>
+                  <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{ports.length}</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('projects'); setMobileSidebarOpen(false); }}
+                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'projects' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+                >
+                  <Folder className="h-4.5 w-4.5" />
+                  <span>Grouped Projects</span>
+                  <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{groupedProjects.length}</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveTab('logs'); setMobileSidebarOpen(false); }}
+                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'logs' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+                >
+                  <History className="h-4.5 w-4.5" />
+                  <span>Diagnostic History</span>
+                  <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{diagnosticLogs.length}</span>
+                </button>
+              </nav>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800/40 text-[11px] text-slate-500">
+                <span className="block font-semibold">OS Engine:</span>
+                <span className="block font-mono mt-0.5 text-slate-400">{os === 'macos' ? 'macOS (lsof)' : os === 'windows' ? 'Windows (netstat)' : 'Linux (lsof)'}</span>
+              </div>
+            </div>
+          </aside>
+        </div>
+      )}
+      
+      {/* DESKTOP SIDEBAR */}
+      <aside className="w-64 border-r border-slate-800 bg-slate-900/60 p-4 hidden md:flex flex-col justify-between backdrop-blur-md">
         <div className="space-y-6">
           {/* Logo */}
           <div className="flex items-center space-x-3 px-2">
@@ -547,25 +618,31 @@ export default function App() {
       <main className="flex-1 flex flex-col overflow-hidden bg-slate-950 relative">
         
         {/* TOP BAR */}
-        <header className="h-16 border-b border-slate-800/60 bg-slate-900/20 px-6 flex items-center justify-between backdrop-blur-md z-10">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold tracking-tight">
+        <header className="h-16 border-b border-slate-800/60 bg-slate-900/20 px-4 md:px-6 flex items-center justify-between backdrop-blur-md z-10">
+          <div className="flex items-center space-x-3">
+            <button 
+              onClick={() => setMobileSidebarOpen(true)}
+              className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition md:hidden"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            <h1 className="text-base md:text-xl font-bold tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
               {activeTab === 'all' && 'Active Network Connections'}
               {activeTab === 'projects' && 'Grouped Network Projects'}
               {activeTab === 'logs' && 'Diagnostic Archives'}
             </h1>
           </div>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Search */}
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+            <div className="relative w-28 xs:w-40 sm:w-52 md:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" />
               <input 
                 type="text"
-                placeholder="Filter by port, process, PID..."
+                placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg bg-slate-900/80 border border-slate-800 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                className="w-full rounded-lg bg-slate-900/80 border border-slate-800 py-1.5 pl-8 pr-3 text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
               />
             </div>
 
@@ -573,43 +650,44 @@ export default function App() {
             <button 
               onClick={fetchPorts}
               disabled={isLoading}
-              className="flex items-center space-x-2 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-300 transition-all disabled:opacity-50"
+              className="flex items-center space-x-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-300 transition-all disabled:opacity-50"
             >
-              <RefreshCw className={`h-4 w-4 text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
+              <RefreshCw className={`h-3.5 w-3.5 text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
             </button>
 
             {/* Global Diagnostic Toggle */}
-            <div className="flex items-center space-x-2 border-l border-slate-800 pl-4">
-              <span className="text-xs text-slate-400 font-medium">ML Diagnostics</span>
+            <div className="flex items-center space-x-2 border-l border-slate-800 pl-2 sm:pl-4">
+              <span className="text-xs text-slate-400 font-medium hidden md:inline">ML Diagnostics</span>
               <button 
                 onClick={() => setAiEnabled(!aiEnabled)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${aiEnabled ? 'bg-brand-500' : 'bg-slate-800'}`}
+                className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${aiEnabled ? 'bg-brand-500' : 'bg-slate-800'}`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-300 ${aiEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-all duration-300 ${aiEnabled ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
           </div>
         </header>
 
         {/* MAIN PANEL */}
-        <section className="flex-1 overflow-y-auto p-6">
+        <section className="flex-1 overflow-y-auto p-4 md:p-6">
           
           {/* TAB 1: ALL ACTIVE PORTS */}
           {activeTab === 'all' && (
             <div className="rounded-xl border border-slate-800/80 bg-slate-900/20 backdrop-blur-md overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    <th className="py-3 px-4 w-28">Port</th>
-                    <th className="py-3 px-4">Process Name</th>
-                    <th className="py-3 px-4 w-28">PID</th>
-                    <th className="py-3 px-4 w-24">Protocol</th>
-                    <th className="py-3 px-4 w-32">Importance</th>
-                    <th className="py-3 px-4">Action Advisory</th>
-                    <th className="py-3 px-4 text-right w-44">Actions</th>
-                  </tr>
-                </thead>
+              <div className="overflow-x-auto w-full">
+                <table className="w-full text-left border-collapse min-w-[640px] md:min-w-0">
+                  <thead>
+                    <tr className="border-b border-slate-800 bg-slate-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      <th className="py-3 px-4 w-24 sm:w-28">Port</th>
+                      <th className="py-3 px-4">Process Name</th>
+                      <th className="py-3 px-4 w-20 sm:w-28">PID</th>
+                      <th className="py-3 px-4 w-20 sm:w-24 hidden md:table-cell">Protocol</th>
+                      <th className="py-3 px-4 w-28 sm:w-32 hidden sm:table-cell">Importance</th>
+                      <th className="py-3 px-4 hidden lg:table-cell">Action Advisory</th>
+                      <th className="py-3 px-4 text-right w-36 sm:w-44">Actions</th>
+                    </tr>
+                  </thead>
                 <tbody className="divide-y divide-slate-800/40 text-sm">
                   {isLoading && ports.length === 0 ? (
                     <tr>
@@ -655,10 +733,10 @@ export default function App() {
                           <td className="py-3 px-4 font-mono text-slate-400">
                             {port.pid}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 hidden md:table-cell">
                             <span className="text-xs text-slate-400 font-mono font-semibold">{port.protocol}</span>
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-3 px-4 hidden sm:table-cell">
                             {analysis ? (
                               <span className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase border ${
                                 isCritical 
@@ -674,7 +752,7 @@ export default function App() {
                               <span className="text-xs text-slate-600 animate-pulse">Scanning...</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 max-w-xs truncate" title={analysis?.reasoning}>
+                          <td className="py-3 px-4 text-xs text-slate-400 max-w-xs truncate hidden lg:table-cell" title={analysis?.reasoning}>
                             {analysis ? (
                               <span className="flex items-center space-x-1.5">
                                 <span className={`h-1.5 w-1.5 rounded-full ${isDangerousToKill ? 'bg-red-500 animate-ping' : 'bg-emerald-500'}`} />
@@ -726,6 +804,7 @@ export default function App() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
@@ -923,8 +1002,16 @@ export default function App() {
 
 
 
+        {/* DIAGNOSTIC DETAILS DRAWER OVERLAY */}
+        {aiDrawerOpen && (
+          <div 
+            onClick={() => setAiDrawerOpen(false)}
+            className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-30 lg:hidden"
+          />
+        )}
+
         {/* DIAGNOSTIC DETAILS DRAWER */}
-        <div className={`fixed top-0 right-0 h-full w-[450px] z-40 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${aiDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed top-0 right-0 h-full w-full sm:w-[450px] z-40 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${aiDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           {/* Drawer Header */}
           <div className="p-4 border-b border-slate-800/80 bg-slate-950/40 flex items-center justify-between">
             <div className="flex items-center space-x-2 text-brand-400">
