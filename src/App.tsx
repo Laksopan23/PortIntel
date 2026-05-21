@@ -102,6 +102,13 @@ async function apiInvoke<T>(cmd: string, args?: any): Promise<T> {
 }
 
 export default function App() {
+  // Environment detection
+  const isExtension = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return window.location.protocol === 'chrome-extension:' || 
+           window.location.search.includes('env=extension');
+  }, []);
+
   // State
   const [ports, setPorts] = useState<PortInfo[]>([]);
   const [portAnalyses, setPortAnalyses] = useState<Record<string, { category: string; importance: string; safety: string; reasoning: string }>>({});
@@ -243,7 +250,7 @@ export default function App() {
 
   // Run on mount
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.location.protocol === 'chrome-extension:') {
+    if (typeof window !== 'undefined' && (window.location.protocol === 'chrome-extension:' || window.location.search.includes('env=extension'))) {
       document.documentElement.classList.add('is-extension');
     }
     fetchPorts();
@@ -465,7 +472,7 @@ export default function App() {
 
   if (serverUnreachable) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 p-6 font-sans text-slate-100 antialiased animate-fade-in">
+      <div className="flex h-full w-full flex-col items-center justify-center bg-slate-950 p-6 font-sans text-slate-100 antialiased animate-fade-in">
         <div className="max-w-md w-full rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center backdrop-blur-md shadow-2xl relative overflow-hidden">
           <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-tr from-brand-600 to-cyan-500 opacity-5 blur-2xl animate-pulse" />
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-500/10 text-brand-400 mb-6">
@@ -493,7 +500,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
+    <div className="flex h-full w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
       
       {/* MOBILE SIDEBAR OVERLAY */}
       {mobileSidebarOpen && (
@@ -565,7 +572,7 @@ export default function App() {
       )}
       
       {/* DESKTOP SIDEBAR */}
-      <aside className="w-64 border-r border-slate-800 bg-slate-900/60 p-4 hidden md:flex flex-col justify-between backdrop-blur-md">
+      <aside className={`w-64 border-r border-slate-800 bg-slate-900/60 p-4 flex-col justify-between backdrop-blur-md ${isExtension ? 'hidden' : 'hidden md:flex'}`}>
         <div className="space-y-6">
           {/* Logo */}
           <div className="flex items-center space-x-3 px-2">
@@ -625,7 +632,7 @@ export default function App() {
           <div className="flex items-center space-x-3">
             <button 
               onClick={() => setMobileSidebarOpen(true)}
-              className="p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition md:hidden"
+              className={`p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition ${isExtension ? 'block' : 'md:hidden'}`}
             >
               <Menu className="h-5 w-5" />
             </button>
