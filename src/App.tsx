@@ -19,8 +19,7 @@ import {
   Layers,
   Shield,
   CheckCircle,
-  Menu,
-  ChevronDown
+  Menu
 } from 'lucide-react';
 import { inspectPort, PortContext } from './aiService';
 
@@ -102,24 +101,6 @@ async function apiInvoke<T>(cmd: string, args?: any): Promise<T> {
   }
 }
 
-function isSystemPort(port: PortInfo): boolean {
-  const processLower = port.process_name?.toLowerCase() || '';
-  const userLower = port.user?.toLowerCase() || '';
-  return port.port < 1024 ||
-         userLower.includes('system') || 
-         userLower.includes('root') || 
-         userLower.includes('_mdns') || 
-         processLower === 'system' ||
-         processLower.includes('svchost') ||
-         processLower.includes('lsass') ||
-         processLower.includes('wininit') ||
-         processLower.includes('services') ||
-         processLower.includes('spoolsv') ||
-         processLower.includes('smss') ||
-         processLower.includes('csrss') ||
-         processLower.includes('winlogon');
-}
-
 export default function App() {
   // Environment detection
   const isExtension = useMemo(() => {
@@ -133,16 +114,8 @@ export default function App() {
   const [portAnalyses, setPortAnalyses] = useState<Record<string, { category: string; importance: string; safety: string; reasoning: string }>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [showSystemPorts, setShowSystemPorts] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    const isExtensionOrWeb = 
-      window.location.protocol === 'chrome-extension:' ||
-      window.location.search.includes('env=extension') ||
-      !(window as any).__TAURI_INTERNALS__;
-    return !isExtensionOrWeb;
-  });
   const [activeTab, setActiveTab] = useState<'all' | 'projects' | 'logs'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [aiEnabled, setAiEnabled] = useState(true);
   const [serverUnreachable, setServerUnreachable] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -289,36 +262,51 @@ export default function App() {
 
 
 
-  // Filter ports based on search query, category, and system port status
+  // Get category key for a port
+  const getPortCategory = (p: PortInfo): string => {
+    const name = p.process_name?.toLowerCase() || '';
+    if (name.includes('node') || name.includes('vite') || name.includes('next') || p.port === 3000 || p.port === 5173 || p.port === 80) {
+      return 'web';
+    } else if (name.includes('postgres') || name.includes('sql') || name.includes('redis') || name.includes('mongo') || p.port === 5432 || p.port === 6379 || p.port === 3306) {
+      return 'database';
+    } else if (name.includes('docker') || name.includes('container') || name.includes('proxy')) {
+      return 'docker';
+    } else if (name.includes('system') || name.includes('mdns') || name.includes('svchost') || name.includes('helper') || p.pid <= 100) {
+      return 'system';
+    } else {
+      return 'other';
+    }
+  };
+
+  // Counts per category for pills
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: ports.length, web: 0, database: 0, docker: 0, system: 0, other: 0 };
+    ports.forEach(p => {
+      const cat = getPortCategory(p);
+      if (counts[cat] !== undefined) {
+        counts[cat]++;
+      }
+    });
+    return counts;
+  }, [ports]);
+
+  // Filter ports based on search query and category
   const filteredPorts = useMemo(() => {
     return ports.filter(p => {
-      const matchesSearch = 
+      // Category filter
+      if (selectedCategory !== 'all' && getPortCategory(p) !== selectedCategory) {
+        return false;
+      }
+      // Search query filter
+      return (
         p.port?.toString().includes(searchQuery) ||
         p.process_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.pid?.toString().includes(searchQuery) ||
         p.protocol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.user?.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      if (!matchesSearch) return false;
-
-      // Filter system ports if toggled off
-      if (!showSystemPorts && isSystemPort(p)) {
-        return false;
-      }
-
-      // Filter by category
-      if (selectedCategory !== 'All') {
-        const key = `${p.port}-${p.pid}`;
-        const analysis = portAnalyses[key];
-        const category = analysis?.category || 'Unknown';
-        if (category !== selectedCategory) {
-          return false;
-        }
-      }
-
-      return true;
+        p.user?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
     });
-  }, [ports, searchQuery, showSystemPorts, selectedCategory, portAnalyses]);
+  }, [ports, searchQuery, selectedCategory]);
 
   // Grouped Projects
   const groupedProjects = useMemo(() => {
@@ -331,23 +319,9 @@ export default function App() {
     };
 
     ports.forEach(p => {
-      const name = p.process_name?.toLowerCase() || '';
-      if (name.includes('node') || name.includes('vite') || name.includes('next') || p.port === 3000 || p.port === 5173 || p.port === 80) {
-        groups.web.count++;
-        groups.web.ports.push(p);
-      } else if (name.includes('postgres') || name.includes('sql') || name.includes('redis') || name.includes('mongo') || p.port === 5432 || p.port === 6379 || p.port === 3306) {
-        groups.database.count++;
-        groups.database.ports.push(p);
-      } else if (name.includes('docker') || name.includes('container') || name.includes('proxy')) {
-        groups.docker.count++;
-        groups.docker.ports.push(p);
-      } else if (name.includes('system') || name.includes('mdns') || name.includes('svchost') || name.includes('helper') || p.pid <= 100) {
-        groups.system.count++;
-        groups.system.ports.push(p);
-      } else {
-        groups.other.count++;
-        groups.other.ports.push(p);
-      }
+      const cat = getPortCategory(p);
+      groups[cat].count++;
+      groups[cat].ports.push(p);
     });
 
     return Object.values(groups).filter(g => g.count > 0);
@@ -733,50 +707,40 @@ export default function App() {
           {/* TAB 1: ALL ACTIVE PORTS */}
           {activeTab === 'all' && (
             <div className="space-y-4">
-              {/* FILTERS AND CONTROLS BAR */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-xl border border-slate-800/60 bg-slate-900/10 backdrop-blur-md">
-                <div className="flex items-center space-x-2.5">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Filter Category:</span>
-                  <div className="relative">
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="appearance-none rounded-lg bg-slate-900 border border-slate-800 py-1.5 pl-3 pr-8 text-xs font-semibold text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500 cursor-pointer"
+              {/* Category Filter Part */}
+              <div className="flex items-center space-x-2 overflow-x-auto pb-1.5 scrollbar-none flex-nowrap shrink-0">
+                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pr-2 select-none shrink-0">
+                  Filter Category:
+                </span>
+                
+                {[
+                  { id: 'all', name: 'All Sockets', count: categoryCounts.all, icon: Terminal, activeColor: 'bg-brand-500/20 border-brand-500/40 text-brand-400' },
+                  { id: 'web', name: 'Web Dev', count: categoryCounts.web, icon: Globe, activeColor: 'bg-blue-500/20 border-blue-500/40 text-blue-400' },
+                  { id: 'database', name: 'Databases', count: categoryCounts.database, icon: Database, activeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' },
+                  { id: 'docker', name: 'Docker', count: categoryCounts.docker, icon: Server, activeColor: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400' },
+                  { id: 'system', name: 'System', count: categoryCounts.system, icon: Cpu, activeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-400' },
+                  { id: 'other', name: 'Others', count: categoryCounts.other, icon: Layers, activeColor: 'bg-slate-500/20 border-slate-500/40 text-slate-400' }
+                ].map((cat) => {
+                  const Icon = cat.icon;
+                  const isActive = selectedCategory === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedCategory(cat.id)}
+                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 select-none shrink-0 ${
+                        isActive 
+                          ? cat.activeColor
+                          : 'border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                      }`}
                     >
-                      <option value="All">All Categories</option>
-                      <option value="Dev Server">Dev Servers</option>
-                      <option value="Database">Databases</option>
-                      <option value="System Service">System Services</option>
-                      <option value="Docker Container">Docker Containers</option>
-                      <option value="Network Service">Network Services</option>
-                      <option value="Web Browser">Web Browsers</option>
-                      <option value="Communication App">Communication Apps</option>
-                      <option value="Remote Access">Remote Access</option>
-                      <option value="System Utility">System Utilities</option>
-                      <option value="Unknown">Unknown / Other</option>
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4">
-                  {/* System Ports Filter Toggle */}
-                  <label className="flex items-center space-x-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={showSystemPorts}
-                      onChange={(e) => setShowSystemPorts(e.target.checked)}
-                      className="rounded border-slate-800 bg-slate-900 text-brand-600 focus:ring-brand-500 focus:ring-offset-slate-950 h-4 w-4 transition cursor-pointer"
-                    />
-                    <span className="text-xs font-semibold text-slate-300">Show OS System Ports</span>
-                  </label>
-                  
-                  <span className="text-xs text-slate-500 border-l border-slate-800 pl-4 hidden xs:inline">
-                    Showing <strong className="text-brand-400">{filteredPorts.length}</strong> of <strong className="text-slate-300">{ports.length}</strong> active connections
-                  </span>
-                </div>
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{cat.name}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${isActive ? 'bg-white/10' : 'bg-slate-950/60 text-slate-500'}`}>
+                        {cat.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="rounded-xl border border-slate-800/80 bg-slate-900/20 backdrop-blur-md overflow-hidden">
@@ -912,7 +876,7 @@ export default function App() {
               </div>
             </div>
           </div>
-        )}
+          )}
 
           {/* TAB 2: GROUPED PROJECTS */}
           {activeTab === 'projects' && (
