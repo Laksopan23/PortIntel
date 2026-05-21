@@ -278,6 +278,44 @@ export default function App() {
     return Object.values(groups).filter(g => g.count > 0);
   }, [ports]);
 
+  // Helper to format termination error with detailed user-friendly explanations
+  const getActionableErrorMessage = (err: string, procName: string) => {
+    const errLower = err.toLowerCase();
+    
+    if (errLower.includes('access is denied') || errLower.includes('access_denied') || errLower.includes('permission denied')) {
+      return (
+        <div className="space-y-2">
+          <p className="font-bold text-red-400">Access Denied (Privilege Restriction)</p>
+          <p className="text-slate-300 text-[11px] leading-relaxed">
+            PortIntel does not have the required system permissions to terminate <strong className="text-white">{procName}</strong>.
+          </p>
+          <div className="mt-1 pl-2 border-l border-red-500/40 text-slate-400 text-[11px] space-y-1">
+            <span className="block">• <strong>Solution 1</strong>: Close PortIntel and relaunch it as <strong>Administrator</strong> (right-click and select "Run as Administrator").</span>
+            <span className="block">• <strong>Solution 2</strong>: Sourced process might be a protected system service or third-party security software (antivirus, AnyDesk self-defense). Stop it via its official UI or Windows Services Manager (services.msc).</span>
+          </div>
+        </div>
+      );
+    }
+    
+    if (errLower.includes('not found') || errLower.includes('no such process')) {
+      return (
+        <div className="space-y-1">
+          <p className="font-bold text-red-400">Process Already Terminated</p>
+          <p className="text-slate-300 text-[11px]">
+            The process <strong className="text-white">{procName}</strong> has already exited or changed its binding socket.
+          </p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-1">
+        <p className="font-bold text-red-400">Termination Failed</p>
+        <p className="text-slate-300 text-[11px]">{err}</p>
+      </div>
+    );
+  };
+
   // Kill process action
   const handleKillProcess = async () => {
     if (!portToKill) return;
@@ -801,8 +839,8 @@ export default function App() {
               </div>
 
               {killError && (
-                <div className="mt-3 p-3 rounded bg-red-950/30 border border-red-900/50 text-xs text-red-400 font-medium">
-                  {killError}
+                <div className="mt-3 p-3.5 rounded-lg bg-red-950/20 border border-red-900/40 text-xs font-medium">
+                  {getActionableErrorMessage(killError, portToKill.process_name)}
                 </div>
               )}
 
