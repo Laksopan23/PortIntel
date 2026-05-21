@@ -207,7 +207,25 @@ async fn kill_process(pid: u32) -> Result<(), String> {
             Ok(())
         } else {
             let err_msg = String::from_utf8_lossy(&output.stderr).to_string();
-            Err(err_msg)
+            if err_msg.contains("Access is denied") || err_msg.contains("ACCESS_DENIED") {
+                // Try to elevate via PowerShell Start-Process RunAs
+                let elevated_status = Command::new("powershell")
+                    .args(&[
+                        "-NoProfile",
+                        "-Command",
+                        &format!("Start-Process taskkill -ArgumentList '/F', '/PID', '{}' -Verb RunAs -WindowStyle Hidden -Wait", pid)
+                    ])
+                    .status()
+                    .map_err(|e| format!("Failed to execute elevated taskkill: {}", e))?;
+                
+                if elevated_status.success() {
+                    Ok(())
+                } else {
+                    Err(format!("Access denied. Administrative privilege elevation was denied or failed. Original error: {}", err_msg))
+                }
+            } else {
+                Err(err_msg)
+            }
         }
     }
 
