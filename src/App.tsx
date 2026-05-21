@@ -18,7 +18,10 @@ import {
   Layers,
   Shield,
   CheckCircle,
-  Menu
+  Menu,
+  Sun,
+  Moon,
+  Monitor
 } from 'lucide-react';
 import { inspectPort, PortContext } from './aiService';
 
@@ -170,6 +173,34 @@ export default function App() {
   const [aiEnabled, setAiEnabled] = useState(true);
   const [serverUnreachable, setServerUnreachable] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => {
+    const saved = localStorage.getItem('portintel_theme');
+    return (saved as 'light' | 'dark' | 'system') || 'system';
+  });
+
+  // Track and apply theme class to documentElement
+  useEffect(() => {
+    const root = window.document.documentElement;
+    const applyTheme = () => {
+      root.classList.remove('light', 'dark');
+      if (theme === 'system') {
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        root.classList.add(systemTheme);
+      } else {
+        root.classList.add(theme);
+      }
+    };
+
+    applyTheme();
+    localStorage.setItem('portintel_theme', theme);
+
+    if (theme === 'system') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const listener = () => applyTheme();
+      mediaQuery.addEventListener('change', listener);
+      return () => mediaQuery.removeEventListener('change', listener);
+    }
+  }, [theme]);
 
   // Diagnostic Drawer State
   const [selectedPort, setSelectedPort] = useState<PortInfo | null>(null);
@@ -573,7 +604,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-full w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
+    <div className="flex h-full w-full overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 antialiased transition-colors duration-200">
       
       {/* MOBILE SIDEBAR OVERLAY */}
       {mobileSidebarOpen && (
@@ -585,19 +616,19 @@ export default function App() {
           />
           
           {/* Floating Sidebar Sheet */}
-          <aside className="relative flex w-64 max-w-xs flex-col bg-slate-900 border-r border-slate-850 p-4 justify-between h-full z-50 animate-slide-in">
+          <aside className="relative flex w-64 max-w-xs flex-col bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/80 p-4 justify-between h-full z-50 animate-slide-in transition-colors duration-200">
             <div className="space-y-6">
               {/* Logo & Close Button */}
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center space-x-3">
                   <Logo className="h-9 w-9" />
                   <div>
-                    <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">PortIntel</span>
+                    <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">PortIntel</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => setMobileSidebarOpen(false)}
-                  className="text-slate-400 hover:text-slate-200"
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -607,35 +638,35 @@ export default function App() {
               <nav className="space-y-1">
                 <button 
                   onClick={() => { setActiveTab('all'); setMobileSidebarOpen(false); }}
-                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'all' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'all' ? 'bg-brand-500/10 dark:bg-brand-600/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 dark:border-brand-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'}`}
                 >
                   <Terminal className="h-4.5 w-4.5" />
                   <span>All Active Ports</span>
-                  <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{ports.length}</span>
+                  <span className="ml-auto rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{ports.length}</span>
                 </button>
                 <button 
                   onClick={() => { setActiveTab('projects'); setMobileSidebarOpen(false); }}
-                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'projects' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'projects' ? 'bg-brand-500/10 dark:bg-brand-600/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 dark:border-brand-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'}`}
                 >
                   <Folder className="h-4.5 w-4.5" />
                   <span>Grouped Projects</span>
-                  <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{groupedProjects.length}</span>
+                  <span className="ml-auto rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{groupedProjects.length}</span>
                 </button>
                 <button 
                   onClick={() => { setActiveTab('logs'); setMobileSidebarOpen(false); }}
-                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'logs' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+                  className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'logs' ? 'bg-brand-500/10 dark:bg-brand-600/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 dark:border-brand-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'}`}
                 >
                   <History className="h-4.5 w-4.5" />
                   <span>Diagnostic History</span>
-                  <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{diagnosticLogs.length}</span>
+                  <span className="ml-auto rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{diagnosticLogs.length}</span>
                 </button>
               </nav>
             </div>
 
-            <div className="space-y-4 pt-4 border-t border-slate-800">
-              <div className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800/40 text-[11px] text-slate-500">
+            <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+              <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/40 text-[11px] text-slate-500 dark:text-slate-400">
                 <span className="block font-semibold">OS Engine:</span>
-                <span className="block font-mono mt-0.5 text-slate-400">{os === 'macos' ? 'macOS (lsof)' : os === 'windows' ? 'Windows (netstat)' : 'Linux (lsof)'}</span>
+                <span className="block font-mono mt-0.5 text-slate-600 dark:text-slate-400">{os === 'macos' ? 'macOS (lsof)' : os === 'windows' ? 'Windows (netstat)' : 'Linux (lsof)'}</span>
               </div>
             </div>
           </aside>
@@ -643,14 +674,14 @@ export default function App() {
       )}
       
       {/* DESKTOP SIDEBAR */}
-      <aside className={`w-64 border-r border-slate-800 bg-slate-900/60 p-4 flex-col justify-between backdrop-blur-md ${isExtension ? 'hidden' : 'hidden md:flex'}`}>
+      <aside className={`w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-4 flex-col justify-between backdrop-blur-md ${isExtension ? 'hidden' : 'hidden md:flex'}`}>
         <div className="space-y-6">
           {/* Logo */}
           <div className="flex items-center space-x-3 px-2">
               <Logo className="h-9 w-9" />
             <div>
-              <span className="text-lg font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">PortIntel</span>
-              <span className="block text-[10px] text-slate-500 font-semibold tracking-wider uppercase">V2 PROT DETECT</span>
+              <span className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">PortIntel</span>
+              <span className="block text-[10px] text-slate-400 dark:text-slate-500 font-semibold tracking-wider uppercase">V2 PROT DETECT</span>
             </div>
           </div>
 
@@ -658,54 +689,53 @@ export default function App() {
           <nav className="space-y-1">
             <button 
               onClick={() => setActiveTab('all')}
-              className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'all' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+              className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'all' ? 'bg-brand-500/10 dark:bg-brand-600/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 dark:border-brand-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'}`}
             >
               <Terminal className="h-4.5 w-4.5" />
               <span>All Active Ports</span>
-              <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{ports.length}</span>
+              <span className="ml-auto rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{ports.length}</span>
             </button>
             <button 
               onClick={() => setActiveTab('projects')}
-              className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'projects' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+              className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'projects' ? 'bg-brand-500/10 dark:bg-brand-600/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 dark:border-brand-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'}`}
             >
               <Folder className="h-4.5 w-4.5" />
               <span>Grouped Projects</span>
-              <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{groupedProjects.length}</span>
+              <span className="ml-auto rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{groupedProjects.length}</span>
             </button>
             <button 
               onClick={() => setActiveTab('logs')}
-              className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'logs' ? 'bg-brand-600/20 text-brand-400 border border-brand-500/30' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 border border-transparent'}`}
+              className={`flex w-full items-center space-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === 'logs' ? 'bg-brand-500/10 dark:bg-brand-600/20 text-brand-600 dark:text-brand-400 border border-brand-500/20 dark:border-brand-500/30' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200 border border-transparent'}`}
             >
               <History className="h-4.5 w-4.5" />
               <span>Diagnostic History</span>
-              <span className="ml-auto rounded bg-slate-800 px-1.5 py-0.5 text-xs text-slate-400">{diagnosticLogs.length}</span>
+              <span className="ml-auto rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{diagnosticLogs.length}</span>
             </button>
           </nav>
         </div>
 
         {/* Footer Sidebar Settings */}
-        <div className="space-y-4 pt-4 border-t border-slate-800">
-
-          <div className="px-3 py-2 rounded-lg bg-slate-950 border border-slate-800/40 text-[11px] text-slate-500">
+        <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div className="px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/40 text-[11px] text-slate-500 dark:text-slate-400">
             <span className="block font-semibold">OS Engine:</span>
-            <span className="block font-mono mt-0.5 text-slate-400">{os === 'macos' ? 'macOS (lsof)' : os === 'windows' ? 'Windows (netstat)' : 'Linux (lsof)'}</span>
+            <span className="block font-mono mt-0.5 text-slate-600 dark:text-slate-400">{os === 'macos' ? 'macOS (lsof)' : os === 'windows' ? 'Windows (netstat)' : 'Linux (lsof)'}</span>
           </div>
         </div>
       </aside>
 
       {/* MAIN CONTAINER */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-slate-950 relative">
+      <main className="flex-1 flex flex-col overflow-hidden bg-slate-50 dark:bg-slate-950 relative transition-colors duration-200">
         
         {/* TOP BAR */}
-        <header className="h-16 border-b border-slate-800/60 bg-slate-900/20 px-4 md:px-6 flex items-center justify-between backdrop-blur-md z-10">
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800/60 bg-white/50 dark:bg-slate-900/20 px-4 md:px-6 flex items-center justify-between backdrop-blur-md z-10 transition-colors duration-200">
           <div className="flex items-center space-x-3">
             <button 
               onClick={() => setMobileSidebarOpen(true)}
-              className={`p-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition ${isExtension ? 'block' : 'md:hidden'}`}
+              className={`p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition ${isExtension ? 'block' : 'md:hidden'}`}
             >
               <Menu className="h-5 w-5" />
             </button>
-            <h1 className="text-base md:text-xl font-bold tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
+            <h1 className="text-base md:text-xl font-bold tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none text-slate-800 dark:text-slate-100">
               {activeTab === 'all' && 'Active Network Connections'}
               {activeTab === 'projects' && 'Grouped Network Projects'}
               {activeTab === 'logs' && 'Diagnostic Archives'}
@@ -715,13 +745,13 @@ export default function App() {
           <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Search */}
             <div className="relative w-28 xs:w-40 sm:w-52 md:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-500" />
+              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
               <input 
                 type="text"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg bg-slate-900/80 border border-slate-800 py-1.5 pl-8 pr-3 text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
+                className="w-full rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 py-1.5 pl-8 pr-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 transition-all"
               />
             </div>
 
@@ -729,20 +759,45 @@ export default function App() {
             <button 
               onClick={fetchPorts}
               disabled={isLoading}
-              className="flex items-center space-x-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-300 transition-all disabled:opacity-50"
+              className="flex items-center space-x-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 transition-all disabled:opacity-50"
             >
-              <RefreshCw className={`h-3.5 w-3.5 text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-3.5 w-3.5 text-slate-500 dark:text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
             {/* Global Diagnostic Toggle */}
-            <div className="flex items-center space-x-2 border-l border-slate-800 pl-2 sm:pl-4">
-              <span className="text-xs text-slate-400 font-medium hidden md:inline">ML Diagnostics</span>
+            <div className="flex items-center space-x-2 border-l border-slate-200 dark:border-slate-800 pl-2 sm:pl-4">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-medium hidden md:inline">ML Diagnostics</span>
               <button 
                 onClick={() => setAiEnabled(!aiEnabled)}
-                className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${aiEnabled ? 'bg-brand-500' : 'bg-slate-800'}`}
+                className={`relative inline-flex h-5 w-9 sm:h-6 sm:w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${aiEnabled ? 'bg-brand-500' : 'bg-slate-300 dark:bg-slate-800'}`}
               >
                 <span className={`inline-block h-3 w-3 sm:h-4 sm:w-4 transform rounded-full bg-white transition-all duration-300 ${aiEnabled ? 'translate-x-5 sm:translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* Theme Toggle Switcher */}
+            <div className="flex items-center space-x-1 border-l border-slate-200 dark:border-slate-800 pl-2 sm:pl-4 shrink-0">
+              <button
+                onClick={() => setTheme('light')}
+                className={`p-1.5 rounded-lg border transition duration-150 ${theme === 'light' ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border-brand-500/20 dark:border-brand-500/30' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                title="Light Mode"
+              >
+                <Sun className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setTheme('dark')}
+                className={`p-1.5 rounded-lg border transition duration-150 ${theme === 'dark' ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border-brand-500/20 dark:border-brand-500/30' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                title="Dark Mode"
+              >
+                <Moon className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setTheme('system')}
+                className={`p-1.5 rounded-lg border transition duration-150 ${theme === 'system' ? 'bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 border-brand-500/20 dark:border-brand-500/30' : 'bg-transparent border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                title="System Theme"
+              >
+                <Monitor className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -756,17 +811,17 @@ export default function App() {
             <div className="space-y-4">
               {/* Category Filter Part */}
               <div className="flex items-center space-x-2 overflow-x-auto pb-1.5 scrollbar-none flex-nowrap shrink-0">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider pr-2 select-none shrink-0">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider pr-2 select-none shrink-0">
                   Filter Category:
                 </span>
                 
                 {[
-                  { id: 'all', name: 'All Sockets', count: categoryCounts.all, icon: Terminal, activeColor: 'bg-brand-500/20 border-brand-500/40 text-brand-400' },
-                  { id: 'web', name: 'Web Dev', count: categoryCounts.web, icon: Globe, activeColor: 'bg-blue-500/20 border-blue-500/40 text-blue-400' },
-                  { id: 'database', name: 'Databases', count: categoryCounts.database, icon: Database, activeColor: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' },
-                  { id: 'docker', name: 'Docker', count: categoryCounts.docker, icon: Server, activeColor: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400' },
-                  { id: 'system', name: 'System', count: categoryCounts.system, icon: Cpu, activeColor: 'bg-amber-500/20 border-amber-500/40 text-amber-400' },
-                  { id: 'other', name: 'Others', count: categoryCounts.other, icon: Layers, activeColor: 'bg-slate-500/20 border-slate-500/40 text-slate-400' }
+                  { id: 'all', name: 'All Sockets', count: categoryCounts.all, icon: Terminal, activeColor: 'bg-brand-500/10 dark:bg-brand-500/20 border-brand-500/30 dark:border-brand-500/40 text-brand-600 dark:text-brand-400' },
+                  { id: 'web', name: 'Web Dev', count: categoryCounts.web, icon: Globe, activeColor: 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/30 dark:border-blue-500/40 text-blue-600 dark:text-blue-400' },
+                  { id: 'database', name: 'Databases', count: categoryCounts.database, icon: Database, activeColor: 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/30 dark:border-emerald-500/40 text-emerald-600 dark:text-emerald-400' },
+                  { id: 'docker', name: 'Docker', count: categoryCounts.docker, icon: Server, activeColor: 'bg-cyan-500/10 dark:bg-cyan-500/20 border-cyan-500/30 dark:border-cyan-500/40 text-cyan-600 dark:text-cyan-400' },
+                  { id: 'system', name: 'System', count: categoryCounts.system, icon: Cpu, activeColor: 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/30 dark:border-amber-500/40 text-amber-600 dark:text-amber-400' },
+                  { id: 'other', name: 'Others', count: categoryCounts.other, icon: Layers, activeColor: 'bg-slate-500/10 dark:bg-slate-500/20 border-slate-500/30 dark:border-slate-500/40 text-slate-600 dark:text-slate-400' }
                 ].map((cat) => {
                   const Icon = cat.icon;
                   const isActive = selectedCategory === cat.id;
@@ -777,12 +832,12 @@ export default function App() {
                       className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all duration-200 select-none shrink-0 ${
                         isActive 
                           ? cat.activeColor
-                          : 'border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                          : 'border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/40'
                       }`}
                     >
                       <Icon className="h-3.5 w-3.5" />
                       <span>{cat.name}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${isActive ? 'bg-white/10' : 'bg-slate-950/60 text-slate-500'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${isActive ? 'bg-black/5 dark:bg-white/10' : 'bg-slate-100 dark:bg-slate-950/60 text-slate-500'}`}>
                         {cat.count}
                       </span>
                     </button>
@@ -790,11 +845,11 @@ export default function App() {
                 })}
               </div>
 
-              <div className="rounded-xl border border-slate-800/80 bg-slate-900/20 backdrop-blur-md overflow-hidden">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/20 backdrop-blur-md overflow-hidden">
               <div className="overflow-x-auto w-full">
                 <table className="w-full text-left border-collapse min-w-[640px] md:min-w-0">
                   <thead>
-                    <tr className="border-b border-slate-800 bg-slate-900/40 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       <th className="py-3 px-4 w-24 sm:w-28">Port</th>
                       <th className="py-3 px-4">Process Name</th>
                       <th className="py-3 px-4 w-20 sm:w-28">PID</th>
@@ -804,7 +859,7 @@ export default function App() {
                       <th className="py-3 px-4 text-right w-36 sm:w-44">Actions</th>
                     </tr>
                   </thead>
-                <tbody className="divide-y divide-slate-800/40 text-sm">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-800/40 text-sm">
                   {isLoading && ports.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-12 text-center text-slate-500">
@@ -829,46 +884,46 @@ export default function App() {
                       return (
                         <tr 
                           key={`${port.port}-${port.pid}-${port.protocol}`}
-                          className="hover:bg-slate-900/30 transition-colors duration-150 group"
+                          className="hover:bg-slate-50 dark:hover:bg-slate-900/30 transition-colors duration-150 group"
                         >
                           <td className="py-3 px-4">
                             <span className={`inline-flex items-center justify-center font-mono font-bold text-xs px-2.5 py-1 rounded-md border ${
                               port.protocol === 'TCP' 
-                                ? 'bg-brand-950/40 border-brand-500/20 text-brand-400' 
-                                : 'bg-purple-950/40 border-purple-500/20 text-purple-400'
+                                ? 'bg-brand-50 dark:bg-brand-950/40 border-brand-200 dark:border-brand-500/20 text-brand-600 dark:text-brand-400' 
+                                : 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-500/20 text-purple-600 dark:text-purple-400'
                             }`}>
                               :{port.port}
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="font-semibold text-slate-200 block">{port.process_name}</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-200 block">{port.process_name}</span>
                             {port.memory && (
                               <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">{port.memory}</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 font-mono text-slate-400">
+                          <td className="py-3 px-4 font-mono text-slate-550 dark:text-slate-400">
                             {port.pid}
                           </td>
                           <td className="py-3 px-4 hidden md:table-cell">
-                            <span className="text-xs text-slate-400 font-mono font-semibold">{port.protocol}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono font-semibold">{port.protocol}</span>
                           </td>
                           <td className="py-3 px-4 hidden sm:table-cell">
                             {analysis ? (
                               <span className={`inline-flex items-center space-x-1.5 px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase border ${
                                 isCritical 
-                                  ? 'bg-amber-950/40 border-amber-500/30 text-amber-400 animate-pulse'
+                                  ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/30 text-amber-700 dark:text-amber-400 animate-pulse'
                                   : analysis.importance === 'DEVELOPMENT'
-                                    ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
-                                    : 'bg-slate-800 border-slate-700 text-slate-400'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                                    : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                               }`}>
                                 <Shield className="h-3 w-3" />
                                 <span>{analysis.importance}</span>
                               </span>
                             ) : (
-                              <span className="text-xs text-slate-600 animate-pulse">Scanning...</span>
+                              <span className="text-xs text-slate-400 dark:text-slate-600 animate-pulse">Scanning...</span>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-xs text-slate-400 max-w-xs truncate hidden lg:table-cell" title={analysis?.reasoning}>
+                          <td className="py-3 px-4 text-xs text-slate-500 dark:text-slate-400 max-w-xs truncate hidden lg:table-cell" title={analysis?.reasoning}>
                             {analysis ? (
                               <span className="flex items-center space-x-1.5">
                                 <span className={`h-1.5 w-1.5 rounded-full ${isDangerousToKill ? 'bg-red-500 animate-ping' : 'bg-emerald-500'}`} />
@@ -883,7 +938,7 @@ export default function App() {
                               {aiEnabled && (
                                 <button 
                                   onClick={() => handleAskAI(port)}
-                                  className="flex items-center space-x-1 rounded-md bg-brand-600/10 hover:bg-brand-600/20 border border-brand-500/20 hover:border-brand-500/40 px-2.5 py-1.5 text-xs text-brand-300 font-semibold transition-all duration-200"
+                                  className="flex items-center space-x-1 rounded-md bg-brand-600/10 hover:bg-brand-600/20 border border-brand-500/20 hover:border-brand-500/40 px-2.5 py-1.5 text-xs text-brand-600 dark:text-brand-300 font-semibold transition-all duration-200"
                                 >
                                   <Info className="h-3.5 w-3.5" />
                                   <span>Inspect</span>
@@ -894,9 +949,9 @@ export default function App() {
                                 <button 
                                   disabled
                                   title="System safety override active. Terminating critical operating services is restricted to prevent crash cycles."
-                                  className="flex items-center space-x-1 rounded-md bg-slate-900 border border-slate-800/40 px-2.5 py-1.5 text-xs text-slate-600 font-semibold cursor-not-allowed"
+                                  className="flex items-center space-x-1 rounded-md bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800/40 px-2.5 py-1.5 text-xs text-slate-400 dark:text-slate-500 font-semibold cursor-not-allowed"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5 text-slate-600" />
+                                  <Trash2 className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                                   <span>Restricted</span>
                                 </button>
                               ) : (
@@ -906,7 +961,7 @@ export default function App() {
                                     setKillConfirmInput('');
                                     setKillError(null);
                                   }}
-                                  className="flex items-center space-x-1 rounded-md bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-900/30 hover:border-red-600 px-2.5 py-1.5 text-xs text-red-400 font-semibold transition-all duration-200"
+                                  className="flex items-center space-x-1 rounded-md bg-red-50 dark:bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-200 dark:border-red-900/30 hover:border-red-600 px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400 font-semibold transition-all duration-200"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                   <span>Kill</span>
@@ -934,7 +989,7 @@ export default function App() {
                   return (
                     <div 
                       key={group.name}
-                      className="rounded-xl border border-slate-800/80 bg-slate-900/30 p-5 hover:border-slate-700/60 transition-all duration-300 relative overflow-hidden group"
+                      className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/30 p-5 hover:border-slate-300 dark:hover:border-slate-700/60 transition-all duration-300 relative overflow-hidden group"
                     >
                       {/* Accent glow */}
                       <div className={`absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-tr ${group.color} opacity-5 blur-2xl group-hover:opacity-10 transition-opacity`} />
@@ -943,23 +998,23 @@ export default function App() {
                         <div className={`p-2.5 rounded-lg bg-gradient-to-tr ${group.color} bg-opacity-20 text-white shadow-md`}>
                           <Icon className="h-5 w-5" />
                         </div>
-                        <span className="text-2xl font-extrabold text-slate-300">{group.count}</span>
+                        <span className="text-2xl font-extrabold text-slate-700 dark:text-slate-300">{group.count}</span>
                       </div>
                       
-                      <h3 className="text-base font-bold text-slate-200 mt-4">{group.name}</h3>
-                      <p className="text-xs text-slate-400 mt-1">Active instances running on native ports.</p>
+                      <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 mt-4">{group.name}</h3>
+                      <p className="text-xs text-slate-550 dark:text-slate-400 mt-1">Active instances running on native ports.</p>
                       
-                      <div className="mt-4 pt-4 border-t border-slate-800/50 space-y-2 max-h-48 overflow-y-auto">
+                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-800/50 space-y-2 max-h-48 overflow-y-auto">
                         {group.ports.map((port) => (
-                          <div key={`${port.port}-${port.pid}`} className="flex items-center justify-between text-xs py-1.5 hover:bg-slate-800/30 px-1 rounded transition">
+                          <div key={`${port.port}-${port.pid}`} className="flex items-center justify-between text-xs py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800/30 px-1 rounded transition">
                             <div className="flex flex-col">
-                              <span className="font-mono font-bold text-brand-400">:{port.port}</span>
+                              <span className="font-mono font-bold text-brand-600 dark:text-brand-400">:{port.port}</span>
                               {port.memory && (
                                 <span className="text-[9px] text-slate-500 font-mono mt-0.5">{port.memory}</span>
                               )}
                             </div>
-                            <span className="text-slate-300 font-semibold">{port.process_name}</span>
-                            <span className="text-slate-500 font-mono">PID {port.pid}</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-semibold">{port.process_name}</span>
+                            <span className="text-slate-500 dark:text-slate-500 font-mono">PID {port.pid}</span>
                           </div>
                         ))}
                       </div>
@@ -974,35 +1029,35 @@ export default function App() {
           {activeTab === 'logs' && (
             <div className="space-y-4">
               {diagnosticLogs.length === 0 ? (
-                <div className="rounded-xl border border-slate-800 bg-slate-900/10 p-8 text-center text-slate-500">
-                  <History className="h-8 w-8 mx-auto mb-2 text-slate-600" />
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/10 p-8 text-center text-slate-500">
+                  <History className="h-8 w-8 mx-auto mb-2 text-slate-400 dark:text-slate-600" />
                   No local diagnostic records stored yet.
-                  <p className="text-xs text-slate-600 mt-1">Ask the AI Assistant about active processes to build up logs.</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-600 mt-1">Ask the AI Assistant about active processes to build up logs.</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
                   {diagnosticLogs.map((log) => (
                     <div 
                       key={log.id} 
-                      className="rounded-xl border border-slate-800/60 bg-slate-900/30 p-4 hover:border-slate-700/60 transition-all flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0"
+                      className="rounded-xl border border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-900/30 p-4 hover:border-slate-300 dark:hover:border-slate-700/60 transition-all flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0"
                     >
                       <div className="space-y-1.5">
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs font-mono bg-brand-950/40 border border-brand-500/20 text-brand-400 font-bold px-2 py-0.5 rounded">
+                          <span className="text-xs font-mono bg-brand-50 dark:bg-brand-950/40 border border-brand-200 dark:border-brand-500/20 text-brand-600 dark:text-brand-400 font-bold px-2 py-0.5 rounded">
                             :{log.port}
                           </span>
-                          <span className="text-sm font-bold text-slate-200">{log.processName}</span>
+                          <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{log.processName}</span>
                           <span className="text-xs text-slate-500 font-mono">(PID: {log.pid})</span>
                         </div>
-                        <p className="text-xs text-slate-400 line-clamp-1 max-w-2xl">
+                        <p className="text-xs text-slate-550 dark:text-slate-400 line-clamp-1 max-w-2xl">
                           {(() => {
                             try {
                               const parsed = JSON.parse(log.analysis);
-                              const safetyColor = parsed.safety === 'Dangerous' ? 'text-red-400 font-bold' : parsed.safety === 'Caution' ? 'text-amber-400 font-bold' : 'text-emerald-400 font-bold';
+                              const safetyColor = parsed.safety === 'Dangerous' ? 'text-red-650 dark:text-red-400 font-bold' : parsed.safety === 'Caution' ? 'text-amber-650 dark:text-amber-400 font-bold' : 'text-emerald-650 dark:text-emerald-400 font-bold';
                               return (
                                 <>
                                   <span className={safetyColor}>[{parsed.safety.toUpperCase()}]</span>{' '}
-                                  <span className="text-slate-300 font-medium">({parsed.category})</span>{' '}
+                                  <span className="text-slate-700 dark:text-slate-300 font-medium">({parsed.category})</span>{' '}
                                   <span>{parsed.description}</span>
                                 </>
                               );
@@ -1011,14 +1066,14 @@ export default function App() {
                             }
                           })()}
                         </p>
-                        <div className="text-[11px] text-slate-500">
+                        <div className="text-[11px] text-slate-550 dark:text-slate-550">
                           <span>Analyzed at {log.timestamp}</span>
                         </div>
                       </div>
                       
                       <button 
                         onClick={() => handleViewHistoricalLog(log)}
-                        className="flex items-center space-x-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1.5 text-xs text-slate-300 font-semibold transition"
+                        className="flex items-center space-x-1.5 rounded-md bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 font-semibold transition"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         <span>View Insights</span>
@@ -1033,17 +1088,17 @@ export default function App() {
         </section>
 
         {/* BOTTOM STATUS BAR */}
-        <footer className="h-10 border-t border-slate-800 bg-slate-950 px-6 flex items-center justify-between text-xs text-slate-500">
+        <footer className="h-10 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-6 flex items-center justify-between text-xs text-slate-550 dark:text-slate-500 transition-colors duration-200">
           <div className="flex items-center space-x-4">
-            <span>Active Ports: <strong className="text-slate-400">{ports.length}</strong></span>
+            <span>Active Ports: <strong className="text-slate-700 dark:text-slate-400">{ports.length}</strong></span>
             <span>•</span>
-            <span>Process Count: <strong className="text-slate-400">{new Set(ports.map(p => p.pid)).size}</strong></span>
+            <span>Process Count: <strong className="text-slate-700 dark:text-slate-400">{new Set(ports.map(p => p.pid)).size}</strong></span>
           </div>
 
           <div className="flex items-center space-x-2">
             <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/30" />
             <span>Model Status: </span>
-            <strong className="text-slate-400 uppercase font-mono">
+            <strong className="text-slate-700 dark:text-slate-400 uppercase font-mono">
               Decision Tree (ONNX Native)
             </strong>
           </div>
@@ -1052,7 +1107,7 @@ export default function App() {
         {/* KILL CONFIRMATION DIALOG */}
         {portToKill && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md rounded-xl border border-red-500/30 bg-slate-900 p-6 shadow-2xl relative overflow-hidden">
+            <div className="w-full max-w-md rounded-xl border border-red-200 dark:border-red-500/30 bg-white dark:bg-slate-900 p-6 shadow-2xl relative overflow-hidden">
               {/* Warning strip */}
               <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
               
@@ -1061,34 +1116,34 @@ export default function App() {
                   <AlertTriangle className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100">Force Kill Process?</h3>
-                  <p className="text-sm text-slate-400 mt-1">
-                    You are attempting to kill <strong className="text-red-400">{portToKill.process_name}</strong> (PID: <strong className="text-slate-300 font-mono">{portToKill.pid}</strong>) binding port <strong className="text-brand-400 font-mono">:{portToKill.port}</strong>.
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">Force Kill Process?</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    You are attempting to kill <strong className="text-red-600 dark:text-red-400">{portToKill.process_name}</strong> (PID: <strong className="text-slate-700 dark:text-slate-300 font-mono">{portToKill.pid}</strong>) binding port <strong className="text-brand-600 dark:text-brand-400 font-mono">:{portToKill.port}</strong>.
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 p-3 rounded bg-slate-950 border border-slate-800 text-xs text-slate-400">
-                <span className="block font-semibold text-slate-300">Potential Side Effects:</span>
+              <div className="mt-4 p-3 rounded bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+                <span className="block font-semibold text-slate-700 dark:text-slate-300">Potential Side Effects:</span>
                 Force-terminating processes can result in uncommitted file data loss or local service state corruption.
               </div>
 
               {killError && (
-                <div className="mt-3 p-3.5 rounded-lg bg-red-950/20 border border-red-900/40 text-xs font-medium">
+                <div className="mt-3 p-3.5 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-xs font-medium text-red-655 dark:text-red-400">
                   {getActionableErrorMessage(killError, portToKill.process_name)}
                 </div>
               )}
 
               <div className="mt-4">
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                  Type <span className="font-mono text-red-400 select-all font-bold">kill</span> to confirm:
+                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Type <span className="font-mono text-red-600 dark:text-red-400 select-all font-bold">kill</span> to confirm:
                 </label>
                 <input 
                   type="text"
                   placeholder="kill"
                   value={killConfirmInput}
                   onChange={(e) => setKillConfirmInput(e.target.value)}
-                  className="w-full rounded-lg bg-slate-950 border border-slate-800 py-2 px-3 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                  className="w-full rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 py-2 px-3 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
                 />
               </div>
 
@@ -1096,7 +1151,7 @@ export default function App() {
                 <button 
                   onClick={() => setPortToKill(null)}
                   disabled={isKilling}
-                  className="rounded-lg bg-slate-800 hover:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-300 transition"
+                  className="rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 transition"
                 >
                   Cancel
                 </button>
@@ -1117,8 +1172,6 @@ export default function App() {
           </div>
         )}
 
-
-
         {/* DIAGNOSTIC DETAILS DRAWER OVERLAY */}
         {aiDrawerOpen && (
           <div 
@@ -1128,15 +1181,15 @@ export default function App() {
         )}
 
         {/* DIAGNOSTIC DETAILS DRAWER */}
-        <div className={`fixed top-0 right-0 h-full w-full sm:w-[450px] z-40 bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${aiDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className={`fixed top-0 right-0 h-full w-full sm:w-[450px] z-40 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col justify-between transform transition-transform duration-300 ease-in-out ${aiDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           {/* Drawer Header */}
-          <div className="p-4 border-b border-slate-800/80 bg-slate-950/40 flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-brand-400">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/40 flex items-center justify-between">
+            <div className="flex items-center space-x-2 text-brand-600 dark:text-brand-400">
               <Info className="h-5 w-5" />
               <div>
-                <h3 className="font-bold text-slate-200">Port Diagnostics</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-200">Port Diagnostics</h3>
                 {selectedPort && (
-                  <span className="block text-[11px] text-slate-400 font-mono mt-0.5">
+                  <span className="block text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                     Port :{selectedPort.port} | {selectedPort.process_name} (PID: {selectedPort.pid})
                   </span>
                 )}
@@ -1144,7 +1197,7 @@ export default function App() {
             </div>
             <button 
               onClick={() => setAiDrawerOpen(false)}
-              className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 transition"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1156,16 +1209,16 @@ export default function App() {
               <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center space-y-3">
                 <div className="relative">
                   <div className="h-10 w-10 rounded-full border-2 border-brand-500/20 border-t-brand-500 animate-spin" />
-                  <Info className="h-4 w-4 text-brand-400 absolute inset-0 m-auto" />
+                  <Info className="h-4 w-4 text-brand-500 dark:text-brand-400 absolute inset-0 m-auto" />
                 </div>
                 <div>
-                  <span className="font-bold block text-sm text-slate-300">Analyzing Port...</span>
-                  <span className="text-xs text-slate-500 block mt-1">Running local heuristics and ML inference</span>
+                  <span className="font-bold block text-sm text-slate-700 dark:text-slate-300">Analyzing Port...</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500 block mt-1">Running local heuristics and ML inference</span>
                 </div>
               </div>
             ) : aiError ? (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center p-4">
-                <div className="rounded-lg bg-red-950/30 border border-red-900/50 p-4 text-xs text-red-400 font-medium text-left max-w-sm">
+                <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 p-4 text-xs text-red-600 dark:text-red-400 font-medium text-left max-w-sm">
                   <span className="block font-bold mb-1 text-sm">Diagnostic Fault:</span>
                   {aiError}
                 </div>
@@ -1173,16 +1226,16 @@ export default function App() {
             ) : selectedAnalysis ? (
               <div className="space-y-5">
                 {/* Status Badges */}
-                <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/60 pb-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Diagnostic Report
                   </span>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
                     selectedAnalysis.safety === 'Dangerous' || selectedAnalysis.safety === 'Dangerous to Kill'
-                      ? 'bg-red-950/40 border-red-500/30 text-red-400'
+                      ? 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400'
                       : selectedAnalysis.safety === 'Caution'
-                        ? 'bg-amber-950/40 border-amber-500/30 text-amber-400'
-                        : 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                        ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                   }`}>
                     {selectedAnalysis.safety === 'Dangerous' || selectedAnalysis.safety === 'Dangerous to Kill'
                       ? 'Protected / Do Not Kill'
@@ -1194,27 +1247,27 @@ export default function App() {
 
                 {/* Details Section */}
                 <div className="space-y-4 text-sm">
-                  <div className="grid grid-cols-2 gap-4 bg-slate-950/40 border border-slate-900 rounded-lg p-3">
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-lg p-3">
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Port binding</span>
-                      <span className="font-mono font-bold text-brand-400">:{selectedPort?.port} ({selectedPort?.protocol})</span>
+                      <span className="font-mono font-bold text-brand-600 dark:text-brand-400">:{selectedPort?.port} ({selectedPort?.protocol})</span>
                     </div>
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Process ID</span>
-                      <span className="font-mono text-slate-300">{selectedPort?.pid}</span>
+                      <span className="font-mono text-slate-700 dark:text-slate-300">{selectedPort?.pid}</span>
                     </div>
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Process Name</span>
-                      <span className="font-semibold text-slate-300">{selectedPort?.process_name}</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedPort?.process_name}</span>
                     </div>
                     <div>
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">User Owner</span>
-                      <span className="text-slate-300">{selectedPort?.user}</span>
+                      <span className="text-slate-700 dark:text-slate-300">{selectedPort?.user}</span>
                     </div>
                     {selectedPort?.memory && (
-                      <div className="col-span-2 border-t border-slate-900/60 pt-2.5 mt-0.5">
+                      <div className="col-span-2 border-t border-slate-200 dark:border-slate-900/60 pt-2.5 mt-0.5">
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Memory Footprint</span>
-                        <span className="text-xs font-mono text-slate-300 block mt-0.5">{selectedPort.memory}</span>
+                        <span className="text-xs font-mono text-slate-750 dark:text-slate-300 block mt-0.5">{selectedPort.memory}</span>
                       </div>
                     )}
                   </div>
@@ -1222,7 +1275,7 @@ export default function App() {
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Classification</span>
                     <div>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold tracking-wide uppercase border bg-slate-800 border-slate-700 text-slate-300">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold tracking-wide uppercase border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
                         {selectedAnalysis.category}
                       </span>
                     </div>
@@ -1230,21 +1283,21 @@ export default function App() {
 
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Description</span>
-                    <p className="text-slate-300 leading-relaxed text-xs">{selectedAnalysis.description}</p>
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">{selectedAnalysis.description}</p>
                   </div>
 
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Advisory & Recommendation</span>
-                    <p className="text-slate-300 leading-relaxed text-xs">{selectedAnalysis.recommendation}</p>
+                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">{selectedAnalysis.recommendation}</p>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-850 space-y-2">
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-850 space-y-2">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Graceful Stop Command</span>
-                    <div className="flex items-center justify-between bg-slate-950 border border-slate-850 rounded px-2.5 py-1.5 font-mono text-xs text-slate-300">
+                    <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 rounded px-2.5 py-1.5 font-mono text-xs text-slate-650 dark:text-slate-300">
                       <span className="truncate select-all">{selectedAnalysis.gracefulCommand}</span>
                       <button
                         onClick={() => navigator.clipboard.writeText(selectedAnalysis.gracefulCommand)}
-                        className="text-brand-400 hover:text-brand-300 font-bold uppercase text-[10px] pl-2.5 border-l border-slate-800 shrink-0"
+                        className="text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-bold uppercase text-[10px] pl-2.5 border-l border-slate-200 dark:border-slate-800 shrink-0"
                       >
                         Copy
                       </button>
@@ -1253,9 +1306,9 @@ export default function App() {
                 </div>
 
                 {/* Direct Action Button in Drawer */}
-                <div className="pt-5 border-t border-slate-850">
+                <div className="pt-5 border-t border-slate-200 dark:border-slate-850">
                   {selectedAnalysis.safety === 'Dangerous' || selectedAnalysis.safety === 'Dangerous to Kill' || selectedAnalysis.safety === 'DANGEROUS_TO_KILL' ? (
-                    <div className="flex items-center space-x-2 text-xs text-slate-500 bg-slate-950/60 border border-slate-900 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 text-xs text-slate-500 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-lg p-3">
                       <Shield className="h-5 w-5 text-red-500 shrink-0" />
                       <span>This is a critical system dependency. Direct termination is disabled to prevent workstation crashes.</span>
                     </div>
@@ -1268,7 +1321,7 @@ export default function App() {
                           setKillError(null);
                         }
                       }}
-                      className="w-full flex items-center justify-center space-x-2 rounded-lg bg-red-650 hover:bg-red-600 hover:text-white py-2.5 text-xs font-semibold text-red-200 transition"
+                      className="w-full flex items-center justify-center space-x-2 rounded-lg bg-red-600 hover:bg-red-500 hover:text-white py-2.5 text-xs font-semibold text-white transition"
                     >
                       <Trash2 className="h-4 w-4" />
                       <span>Terminate Process Binding</span>
@@ -1278,7 +1331,7 @@ export default function App() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-slate-500 text-center">
-                <Info className="h-8 w-8 text-slate-600 mb-2" />
+                <Info className="h-8 w-8 text-slate-400 dark:text-slate-600 mb-2" />
                 <span>No port selected</span>
               </div>
             )}
@@ -1287,19 +1340,19 @@ export default function App() {
 
         {/* SUCCESS TOAST NOTIFICATION */}
         {successToast && successToast.show && (
-          <div className="fixed top-6 right-6 z-50 flex items-center space-x-3 bg-slate-900/90 backdrop-blur border border-emerald-500/30 rounded-xl p-4 shadow-2xl animate-slide-in max-w-sm">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+          <div className="fixed top-6 right-6 z-50 flex items-center space-x-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-emerald-250 dark:border-emerald-500/30 rounded-xl p-4 shadow-2xl animate-slide-in max-w-sm">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 dark:text-emerald-400">
               <CheckCircle className="h-5 w-5" />
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-xs text-slate-100">{successToast.message}</h4>
+              <h4 className="font-bold text-xs text-slate-800 dark:text-slate-100">{successToast.message}</h4>
               {successToast.subMessage && (
-                <p className="text-[10px] text-slate-400 mt-0.5 leading-normal select-text selection:bg-brand-500">{successToast.subMessage}</p>
+                <p className="text-[10px] text-slate-550 dark:text-slate-400 mt-0.5 leading-normal select-text selection:bg-brand-500">{successToast.subMessage}</p>
               )}
             </div>
             <button 
               onClick={() => setSuccessToast(null)}
-              className="text-slate-500 hover:text-slate-300 transition shrink-0 self-start mt-0.5"
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-350 transition shrink-0 self-start mt-0.5"
             >
               <X className="h-4 w-4" />
             </button>

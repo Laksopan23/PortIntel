@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 font-sans antialiased overflow-hidden select-none;
+    @apply bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans antialiased overflow-hidden select-none transition-colors duration-200;
     font-family: 'Outfit', sans-serif;
   }
   code, pre {
