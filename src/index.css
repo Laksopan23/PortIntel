@@ -76,3 +76,12 @@
 .animate-slide-in {
   animation: slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* Chrome Extension Popup Sizing Constraints */
+.is-extension, .is-extension body {
+  min-width: 780px;
+  min-height: 580px;
+  width: 780px;
+  height: 580px;
+  overflow: hidden;
+}

@@ -243,6 +243,9 @@ export default function App() {
 
   // Run on mount
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.protocol === 'chrome-extension:') {
+      document.documentElement.classList.add('is-extension');
+    }
     fetchPorts();
     // Auto refresh every 10 seconds
     const interval = setInterval(fetchPorts, 10000);
