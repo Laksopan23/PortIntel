@@ -109,28 +109,45 @@ function Logo({ className = "h-8 w-8", glow = true }: LogoProps) {
   return (
     <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="pi-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0e91e9" />
-          <stop offset="100%" stopColor="#06b6d4" />
+        <linearGradient id="pi-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0b1329" />
+          <stop offset="100%" stopColor="#1b254b" />
         </linearGradient>
-        <filter id="pi-logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="6" floodColor="#0e91e9" floodOpacity="0.5"/>
-        </filter>
+        <linearGradient id="pi-accent-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00f2fe" />
+          <stop offset="100%" stopColor="#4facfe" />
+        </linearGradient>
+        {glow && (
+          <filter id="pi-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#00f2fe" floodOpacity="0.6" />
+          </filter>
+        )}
       </defs>
-      <circle cx="50" cy="50" r="45" fill="#0f172a" stroke="url(#pi-logo-grad)" strokeWidth="4" />
-      <circle cx="50" cy="50" r="28" fill="#1e293b" />
+      {/* Outer rounded tile */}
+      <rect x="6" y="6" width="88" height="88" rx="20" fill="url(#pi-bg-grad)" stroke="url(#pi-accent-grad)" strokeWidth="2.5" />
+      
+      {/* Dashed radar circle */}
+      <circle cx="50" cy="50" r="36" stroke="url(#pi-accent-grad)" strokeWidth="1.5" strokeDasharray="4 3" fill="none" opacity="0.6" />
+      
+      {/* Ethernet port face */}
       <path 
-        d="M 50 12 A 38 38 0 0 1 88 50" 
-        fill="none" 
-        stroke="#0e91e9" 
+        d="M 32 34 L 68 34 A 4 4 0 0 1 72 38 L 72 58 A 4 4 0 0 1 68 62 L 58 62 L 58 66 L 42 66 L 42 62 L 32 62 A 4 4 0 0 1 28 58 L 28 38 A 4 4 0 0 1 32 34 Z" 
+        fill="#1e293b" 
+        stroke="#ffffff" 
         strokeWidth="3" 
-        strokeLinecap="round" 
-        filter={glow ? "url(#pi-logo-glow)" : undefined}
+        strokeLinejoin="round" 
       />
-      <rect x="36" y="44" width="28" height="12" rx="2" fill="#334155" />
-      <circle cx="42" cy="50" r="2" fill="#06b6d4" />
-      <circle cx="50" cy="50" r="2" fill="#06b6d4" />
-      <circle cx="58" cy="50" r="2" fill="#06b6d4" />
+      
+      {/* Glowing pins */}
+      <line x1="38" y1="39" x2="38" y2="49" stroke="#00f2fe" strokeWidth="2.5" strokeLinecap="round" filter={glow ? "url(#pi-glow)" : undefined} />
+      <line x1="44" y1="39" x2="44" y2="49" stroke="#00f2fe" strokeWidth="2.5" strokeLinecap="round" filter={glow ? "url(#pi-glow)" : undefined} />
+      <line x1="50" y1="39" x2="50" y2="49" stroke="#00f2fe" strokeWidth="2.5" strokeLinecap="round" filter={glow ? "url(#pi-glow)" : undefined} />
+      <line x1="56" y1="39" x2="56" y2="49" stroke="#00f2fe" strokeWidth="2.5" strokeLinecap="round" filter={glow ? "url(#pi-glow)" : undefined} />
+      <line x1="62" y1="39" x2="62" y2="49" stroke="#00f2fe" strokeWidth="2.5" strokeLinecap="round" filter={glow ? "url(#pi-glow)" : undefined} />
+      
+      {/* Indicator LEDs */}
+      <circle cx="65" cy="40" r="2.5" fill="#22c55e" filter={glow ? "url(#pi-glow)" : undefined} />
+      <circle cx="35" cy="40" r="2.5" fill="#eab308" />
     </svg>
   );
 }
